@@ -96,7 +96,7 @@ impl<'a> Generator<'a> {
     fn write_binop(&mut self, op: &BinOperator) {
         if op == &BinOperator::Subtraction || op == &BinOperator::Division {
             self.output.push_str(&format!(
-                "mov %eax, %ecx\n\
+                "movl %eax, %ecx\n\
                 pop %eax\n{}",
                 match op {
                     &BinOperator::Subtraction => "subl %ecx, %eax\n",
