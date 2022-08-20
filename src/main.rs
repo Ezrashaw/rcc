@@ -2,9 +2,10 @@
 
 use std::{env, fs, path::Path, process::Command};
 
+use generator::Generator;
 use lexer::Lexer;
 
-use crate::{generator::Generator, parser::Parser};
+use crate::parser::Parser;
 
 mod ctypes;
 mod generator;

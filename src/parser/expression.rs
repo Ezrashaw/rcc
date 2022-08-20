@@ -1,25 +1,10 @@
 use crate::ctypes::CInteger;
 
 #[derive(Debug)]
-pub struct Expression {
-    pub term: Term,
-    pub nodes: Vec<(BinOperator, Term)>,
-}
-
-#[derive(Debug)]
-pub struct Term {
-    pub factor: Factor,
-    pub nodes: Vec<(BinOperator, Factor)>,
-}
-
-#[derive(Debug)]
-pub enum Factor {
-    Expression(Box<Expression>), // wrapped in parens
-    UnaryOp {
-        operator: UnaryOperator,
-        factor: Box<Factor>,
-    },
+pub enum Expression {
     Constant(CInteger),
+    UnaryOp(UnaryOperator, Box<Expression>),
+    BinaryOp(BinOperator, Box<Expression>, Box<Expression>),
 }
 
 #[derive(Debug)]

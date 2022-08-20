@@ -7,7 +7,7 @@ use crate::{
 
 use self::{
     ast::{Function, Program, ReturnStatement},
-    expression::{BinOperator, Expression, Factor, Term, UnaryOperator},
+    expression::{BinOperator, Expression, UnaryOperator},
 };
 
 pub mod ast;
@@ -113,8 +113,7 @@ impl<'a> Parser<'a> {
     }
 
     fn read_expression(&mut self) -> Expression {
-        let mut nodes = vec![];
-        let first_term = self.read_term();
+        let mut term = self.read_term();
 
         let mut next_token = self.peek_token();
         while next_token == &Token::Addition || next_token == &Token::Minus {
@@ -125,44 +124,35 @@ impl<'a> Parser<'a> {
             };
 
             let next_term = self.read_term();
-            let node = (op, next_term);
-            nodes.push(node);
+            term = Expression::BinaryOp(op, Box::new(term), Box::new(next_term));
 
             next_token = self.peek_token();
         }
 
-        Expression {
-            term: first_term,
-            nodes,
-        }
+        term
     }
 
-    fn read_term(&mut self) -> Term {
-        let mut nodes = vec![];
-        let first_factor = self.read_factor();
+    fn read_term(&mut self) -> Expression {
+        let mut factor = self.read_factor();
 
         let mut next_token = self.peek_token();
         while next_token == &Token::Multiplication || next_token == &Token::Division {
             let op = match self.read_token() {
-                Token::Multiplication => BinOperator::Multiplication,
-                Token::Division => BinOperator::Division,
+                &Token::Multiplication => BinOperator::Multiplication,
+                &Token::Division => BinOperator::Division,
                 _ => panic!("Unknown token in read_term"),
             };
 
             let next_factor = self.read_factor();
-            let node = (op, next_factor);
-            nodes.push(node);
+            factor = Expression::BinaryOp(op, Box::new(factor), Box::new(next_factor));
 
             next_token = self.peek_token();
         }
 
-        Term {
-            factor: first_factor,
-            nodes,
-        }
+        factor
     }
 
-    fn read_factor(&mut self) -> Factor {
+    fn read_factor(&mut self) -> Expression {
         let token = self.read_token();
 
         match token {
@@ -171,9 +161,9 @@ impl<'a> Parser<'a> {
                 if self.read_token() != &Token::CloseParen {
                     panic!("Expected close paren!");
                 }
-                return Factor::Expression(Box::new(exp));
+                return exp;
             }
-            &Token::Literal(Literal::Integer(int)) => return Factor::Constant(int),
+            &Token::Literal(Literal::Integer(int)) => return Expression::Constant(int),
             &Token::BitwiseComplement | &Token::LogicalNegation | &Token::Minus => (),
             _ => panic!("Error in read_factor, unknown token"),
         }
@@ -189,9 +179,6 @@ impl<'a> Parser<'a> {
 
         let inner = self.read_factor();
 
-        return Factor::UnaryOp {
-            operator,
-            factor: Box::new(inner),
-        };
+        return Expression::UnaryOp(operator, Box::new(inner));
     }
 }

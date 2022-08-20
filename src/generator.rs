@@ -1,8 +1,6 @@
-use std::fmt::format;
-
 use crate::parser::{
     ast::{Program, ReturnStatement},
-    expression::{BinOperator, Expression, Factor, Term, UnaryOperator},
+    expression::{BinOperator, Expression, UnaryOperator},
 };
 
 pub struct Generator<'a> {
@@ -38,59 +36,30 @@ impl<'a> Generator<'a> {
         self.output.push_str(&format!("ret\n"));
     }
 
-    fn write_expression(&mut self, expression: &Expression) {
-        self.write_term(&expression.term);
-
-        for i in &expression.nodes {
-            self.write_binop_term(&i.1, &i.0);
-        }
-    }
-
-    fn write_term(&mut self, term: &Term) {
-        self.write_factor(&term.factor);
-
-        for i in &term.nodes {
-            self.write_binop_factor(&i.1, &i.0);
-        }
-    }
-
-    fn write_factor(&mut self, factor: &Factor) {
-        match &factor {
-            Factor::Constant(val) => {
-                self.output.push_str(&format!("movl ${}, %eax\n", val));
-            }
-            Factor::UnaryOp { operator, factor } => match operator {
-                UnaryOperator::Negation => {
-                    self.write_factor(&factor);
-                    self.output.push_str(&format!("neg %eax\n"));
-                }
-                UnaryOperator::BitwiseComplement => {
-                    self.write_factor(&factor);
-                    self.output.push_str(&format!("not %eax\n"));
-                }
-                UnaryOperator::LogicalNegation => {
-                    self.write_factor(&factor);
-                    self.output.push_str(&format!(
+    fn write_expression(&mut self, exp: &Expression) {
+        match exp {
+            Expression::Constant(int) => self.output.push_str(&format!("movl ${}, %eax\n", int)),
+            Expression::UnaryOp(op, exp) => {
+                self.write_expression(exp);
+                match op {
+                    UnaryOperator::Negation => self.output.push_str(&format!("neg %eax\n")),
+                    UnaryOperator::BitwiseComplement => {
+                        self.output.push_str(&format!("not %eax\n"))
+                    }
+                    UnaryOperator::LogicalNegation => self.output.push_str(&format!(
                         "cmpl  $0, %eax\n\
                         movl   $0, %eax\n\
                         sete   %al\n"
-                    ));
+                    )),
                 }
-            },
-            Factor::Expression(exp) => self.write_expression(&exp),
+            }
+            Expression::BinaryOp(op, exp1, exp2) => {
+                self.write_expression(&exp1);
+                self.output.push_str(&format!("push %eax\n"));
+                self.write_expression(&exp2);
+                self.write_binop(op);
+            }
         }
-    }
-
-    fn write_binop_term(&mut self, term: &Term, op: &BinOperator) {
-        self.output.push_str(&format!("push %eax\n"));
-        self.write_term(&term);
-        self.write_binop(&op);
-    }
-
-    fn write_binop_factor(&mut self, factor: &Factor, op: &BinOperator) {
-        self.output.push_str(&format!("push %eax\n"));
-        self.write_factor(&factor);
-        self.write_binop(&op);
     }
 
     fn write_binop(&mut self, op: &BinOperator) {

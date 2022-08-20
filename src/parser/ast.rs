@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::ctypes::{CInteger, CType};
 
-use super::expression::{BinOperator, Expression, Factor, Term, UnaryOperator};
+use super::expression::{BinOperator, Expression, UnaryOperator};
 
 pub struct Program(pub Function);
 
@@ -32,40 +32,18 @@ impl fmt::Debug for Program {
 
 impl Program {
     fn write_exp(f: &mut fmt::Formatter<'_>, exp: &Expression) -> fmt::Result {
-        Self::write_term(f, &exp.term)?;
-
-        for term in &exp.nodes {
-            Self::write_binop(f, &term.0)?;
-            Self::write_term(f, &term.1)?;
-        }
-
-        Ok(())
-    }
-
-    fn write_term(f: &mut fmt::Formatter<'_>, term: &Term) -> fmt::Result {
-        write!(f, "(")?;
-        Self::write_factor(f, &term.factor)?;
-
-        for factor in &term.nodes {
-            Self::write_binop(f, &factor.0)?;
-            Self::write_factor(f, &factor.1)?;
-        }
-
-        write!(f, ")")?;
-        Ok(())
-    }
-
-    fn write_factor(f: &mut fmt::Formatter<'_>, factor: &Factor) -> fmt::Result {
-        match factor {
-            Factor::Expression(exp) => {
-                Self::write_exp(f, exp)?;
+        match exp {
+            Expression::BinaryOp(op, exp1, exp2) => {
+                Self::write_exp(f, &exp1)?;
+                Self::write_binop(f, &op)?;
+                Self::write_exp(f, &exp2)?;
             }
-            Factor::Constant(int) => write!(f, "{int}")?,
-            Factor::UnaryOp { operator, factor } => {
-                Self::write_unop(f, operator)?;
-                Self::write_factor(f, factor)?;
+            Expression::UnaryOp(op, exp) => {
+                Self::write_unop(f, &op)?;
+                Self::write_exp(f, &exp)?;
             }
-        };
+            Expression::Constant(int) => write!(f, "{int}")?,
+        }
 
         Ok(())
     }
