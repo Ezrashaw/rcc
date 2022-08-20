@@ -55,7 +55,7 @@ impl<'a> Lexer<'a> {
 
         // matching identifers and keywords
         if ch.is_ascii_alphabetic() {
-            let str = self.read_complex(|ch| ch.is_ascii_alphabetic());
+            let str = self.read_complex(|ch| ch.is_ascii_alphanumeric() || ch == '_');
 
             // keyword matching
             // TODO: make this system smarter (we could automatically do this, maybe with 'build.rs')
@@ -74,10 +74,6 @@ impl<'a> Lexer<'a> {
 
             // return the tokenized keyword
             if let Some(keyword) = keyword {
-                // not entirely sure but keywords must have whitespace after them
-                // TODO: check this is actually whitespace; it shouldn't matter but could help with sensible error messages
-                self.read_char();
-
                 return Token::Keyword(keyword);
             }
 
