@@ -62,6 +62,13 @@ impl<'a> Lexer<'a> {
             let keyword = match str.as_str() {
                 "return" => Some(Keyword::Return),
                 "int" => Some(Keyword::DataType(CType::Integer)),
+                "if" => Some(Keyword::If),
+                "else" => Some(Keyword::Else),
+                "for" => Some(Keyword::For),
+                "while" => Some(Keyword::While),
+                "do" => Some(Keyword::Do),
+                "break" => Some(Keyword::Break),
+                "continue" => Some(Keyword::Continue),
                 _ => None,
             };
 
@@ -119,6 +126,10 @@ impl<'a> Lexer<'a> {
             '/' => Token::Division,
             '<' => Token::LessThan,
             '>' => Token::GreaterThan,
+            '=' => Token::Assignment,
+            ':' => Token::Colon,
+            '?' => Token::QuestionMark,
+            ',' => Token::Comma,
             _ => Token::Illegal,
         }
     }

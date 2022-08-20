@@ -26,6 +26,13 @@ pub enum Token {
     GreaterThan,
     GreaterThanOrEqual,
 
+    Assignment,
+
+    Colon,
+    QuestionMark,
+
+    Comma,
+
     Keyword(Keyword),
     Identifier(String),
     Literal(Literal),
@@ -35,6 +42,15 @@ pub enum Token {
 pub enum Keyword {
     Return,
     DataType(CType),
+
+    If,
+    Else,
+
+    For,
+    While,
+    Do,
+    Break,
+    Continue,
 }
 
 #[derive(Debug, Clone, PartialEq)]
