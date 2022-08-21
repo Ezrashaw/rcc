@@ -1,5 +1,5 @@
 use crate::parser::{
-    ast::{Program, ReturnStatement},
+    ast::{Program, Statement},
     expression::{BinOperator, Expression, UnaryOperator},
 };
 
@@ -20,7 +20,9 @@ impl<'a> Generator<'a> {
 
     pub fn gen_asm(mut self) -> String {
         self.write_fn_def(&self.input.0.name);
-        self.write_return_statement(&self.input.0.statements[0]);
+        for statement in &self.input.0.statements {
+            self.write_statement(statement);
+        }
 
         self.output
     }
@@ -32,10 +34,14 @@ impl<'a> Generator<'a> {
         ));
     }
 
-    fn write_return_statement(&mut self, statement: &ReturnStatement) {
-        self.write_expression(&statement.ret_val);
+    fn write_statement(&mut self, statement: &Statement) {
+        if let Statement::Return(exp) = statement {
+            self.write_expression(exp);
 
-        self.output.push_str(&format!("ret\n"));
+            self.output.push_str(&format!("ret\n"));
+        } else {
+            todo!()
+        }
     }
 
     fn write_expression(&mut self, exp: &Expression) {
@@ -49,7 +55,7 @@ impl<'a> Generator<'a> {
                         self.output.push_str(&format!("not %eax\n"))
                     }
                     UnaryOperator::LogicalNegation => self.output.push_str(&format!(
-                        "cmpl  $0, %eax\n\
+                        "cmpl  , %eax\n\
                         movl   $0, %eax\n\
                         sete   %al\n"
                     )),
@@ -65,6 +71,8 @@ impl<'a> Generator<'a> {
                 self.write_expression(&exp2);
                 self.write_binop(op);
             }
+            Expression::Assign(_, _) => todo!(),
+            Expression::Variable(_) => todo!(),
         }
     }
 

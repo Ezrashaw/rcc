@@ -10,21 +10,38 @@ pub struct Program(pub Function);
 pub struct Function {
     pub name: String,
     pub return_type: CType,
-    pub statements: Vec<ReturnStatement>,
+    pub statements: Vec<Statement>,
 }
 
 #[derive(Debug)]
-pub struct ReturnStatement {
-    pub ret_val: Expression,
+pub enum Statement {
+    Return(Expression),
+    Declare(String, Option<Expression>),
+    Expression(Expression),
 }
 
 impl fmt::Debug for Program {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let fun = &self.0;
-        writeln!(f, "fn {}() -> {:?}", fun.name, fun.return_type)?;
-        write!(f, "    return ")?;
-        let exp = &fun.statements[0].ret_val;
-        Self::write_exp(f, exp)?;
+        write!(f, "fn {}() -> {:?}\n\t", fun.name, fun.return_type)?;
+        for statement in &fun.statements {
+            match statement {
+                Statement::Return(exp) => {
+                    write!(f, "RETURN ")?;
+                    Self::write_exp(f, exp)?;
+                }
+                Statement::Declare(name, val) => {
+                    write!(f, "INT {}", name)?;
+                    if val.is_some() {
+                        write!(f, " = ")?;
+                        Self::write_exp(f, val.as_ref().unwrap())?;
+                    }
+                }
+                Statement::Expression(exp) => Self::write_exp(f, &exp)?,
+            }
+
+            write!(f, "\n\t")?;
+        }
 
         Ok(())
     }
@@ -43,6 +60,11 @@ impl Program {
                 Self::write_exp(f, &exp)?;
             }
             Expression::Constant(int) => write!(f, "{int}")?,
+            Expression::Assign(name, exp) => {
+                write!(f, "{} = ", name)?;
+                Self::write_exp(f, exp)?;
+            }
+            Expression::Variable(name) => write!(f, "{}", name)?,
         }
 
         Ok(())

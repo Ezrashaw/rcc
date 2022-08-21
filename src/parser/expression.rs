@@ -5,6 +5,8 @@ pub enum Expression {
     Constant(CInteger),
     UnaryOp(UnaryOperator, Box<Expression>),
     BinaryOp(BinOperator, Box<Expression>, Box<Expression>),
+    Assign(String, Box<Expression>),
+    Variable(String),
 }
 
 #[derive(Debug)]

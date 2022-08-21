@@ -1,12 +1,10 @@
-use std::str::ParseBoolError;
-
 use crate::{
     ctypes::CType,
     lexer::token::{Keyword, Literal, Token},
 };
 
 use self::{
-    ast::{Function, Program, ReturnStatement},
+    ast::{Function, Program, Statement},
     expression::{BinOperator, Expression, UnaryOperator},
 };
 
@@ -17,16 +15,11 @@ pub mod expression;
 pub struct Parser<'a> {
     input: &'a [Token],
     pub position: usize,
-    pub tok: &'a Token,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a [Token]) -> Self {
-        let parser = Self {
-            input,
-            position: 0,
-            tok: &Token::Illegal,
-        };
+        let parser = Self { input, position: 0 };
 
         parser
     }
@@ -42,7 +35,6 @@ impl<'a> Parser<'a> {
             &self.input[self.position]
         };
         self.position += 1;
-        self.tok = token;
         token
     }
 
@@ -58,7 +50,7 @@ impl<'a> Parser<'a> {
         if let Token::Identifier(ident) = self.read_token() {
             ident.clone()
         } else {
-            panic!("Expected identifer but found {:?}", self.tok);
+            panic!("Expected identifer but found");
         }
     }
 
@@ -66,7 +58,7 @@ impl<'a> Parser<'a> {
         if let Token::Keyword(Keyword::DataType(data_type)) = self.read_token() {
             data_type.clone()
         } else {
-            panic!("Expected type but found {:?}", self.tok);
+            panic!("Expected type but found");
         }
     }
 
@@ -86,9 +78,14 @@ impl<'a> Parser<'a> {
         if self.read_token() != &Token::OpenBrace {
             panic!("No opening block brace!")
         }
-        let statements = vec![self.read_statement()];
-        if self.read_token() != &Token::CloseBrace {
-            panic!("No closing block brace!")
+        let mut statements = vec![];
+        loop {
+            statements.push(self.read_statement());
+
+            if self.peek_token() == &Token::CloseBrace {
+                self.read_token();
+                break;
+            }
         }
         Function {
             name,
@@ -97,22 +94,60 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn read_statement(&mut self) -> ReturnStatement {
-        let return_statement = self.read_token();
-        if *return_statement != Token::Keyword(Keyword::Return) {
-            panic!("Not a return statement!")
+    fn read_statement(&mut self) -> Statement {
+        let token = self.peek_token();
+
+        let statement = if let Token::Keyword(keyword) = token {
+            if keyword == &Keyword::Return {
+                self.read_token();
+                let exp = self.read_expression();
+
+                Statement::Return(exp)
+            } else if let Keyword::DataType(_ctype) = keyword {
+                self.read_token();
+                let name = self.read_ident();
+                let assign = self.peek_token();
+                if assign == &Token::Assignment {
+                    self.read_token();
+                    Statement::Declare(name, Some(self.read_expression()))
+                } else {
+                    Statement::Declare(name, None)
+                }
+            } else {
+                panic!("Unknown keyword in statement!")
+            }
         } else {
-            let expression = self.read_expression();
-            if self.read_token() != &Token::Semicolon {
-                panic!("No semicolon! {:?}", self.tok)
-            }
-            ReturnStatement {
-                ret_val: expression,
-            }
+            Statement::Expression(self.read_expression())
+        };
+
+        if self.read_token() != &Token::Semicolon {
+            panic!("Missing semicolon!");
         }
+
+        statement
     }
 
     fn read_expression(&mut self) -> Expression {
+        let token = &self.input[self.position + 1];
+
+        if let Token::Assignment = token {
+            let ident = self.read_token();
+            if let Token::Identifier(name) = ident {
+                let name = name.clone();
+                self.read_token(); // assignment
+
+                let exp = self.read_expression();
+
+                return Expression::Assign(name, Box::new(exp));
+            } else {
+                panic!("Expected identifier! {:?}", ident);
+            }
+        }
+
+        self.read_logical_or_exp()
+    }
+
+    fn read_logical_or_exp(&mut self) -> Expression {
         let mut exp = self.read_logical_and_exp();
 
         let mut next_token = self.peek_token();
@@ -240,16 +275,17 @@ impl<'a> Parser<'a> {
         let token = self.read_token();
 
         match token {
-            &Token::OpenParen => {
+            Token::OpenParen => {
                 let exp = self.read_expression();
                 if self.read_token() != &Token::CloseParen {
                     panic!("Expected close paren!");
                 }
                 return exp;
             }
-            &Token::Literal(Literal::Integer(int)) => return Expression::Constant(int),
-            &Token::BitwiseComplement | &Token::LogicalNegation | &Token::Minus => (),
-            _ => panic!("Error in read_factor, unknown token"),
+            Token::Literal(Literal::Integer(int)) => return Expression::Constant(*int),
+            Token::Identifier(name) => return Expression::Variable(name.clone()),
+            Token::BitwiseComplement | &Token::LogicalNegation | &Token::Minus => (),
+            _ => panic!("Error in read_factor, unknown token {:?}", token),
         }
 
         //unary operator parsing
