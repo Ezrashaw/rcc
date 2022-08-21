@@ -19,8 +19,6 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a [Token]) -> Self {
-        
-
         Self { input, position: 0 }
     }
 
@@ -80,12 +78,12 @@ impl<'a> Parser<'a> {
         }
         let mut statements = vec![];
         loop {
-            statements.push(self.read_statement());
-
             if self.peek_token() == &Token::CloseBrace {
                 self.read_token();
                 break;
             }
+            
+            statements.push(self.read_statement());
         }
         Function {
             name,
