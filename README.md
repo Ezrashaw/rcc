@@ -6,9 +6,10 @@
 
 ## Milestones
 - [x] Can compile extremely basic C program
-- [x] Basic maths expression eval
-- [ ] More maths expressions
-- [ ] Local variables
+- [x] Maths in C
+- [x] More maths
+- [ ] All the maths
+- [x] Local variables
 - [ ] Functions
 - [ ] Global variables
 - [ ] More types
