@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::ctypes::{CType};
+use crate::ctypes::CType;
 
 use super::expression::{BinOperator, Expression, UnaryOperator};
 
@@ -10,37 +10,43 @@ pub struct Program(pub Function);
 pub struct Function {
     pub name: String,
     pub return_type: CType,
-    pub statements: Vec<Statement>,
+    pub block: Vec<BlockItem>,
 }
 
 #[derive(Debug)]
 pub enum Statement {
     Return(Expression),
-    Declare(String, Option<Expression>),
     Expression(Expression),
+    If(Expression, Box<Statement>, Option<Box<Statement>>),
+}
+
+#[derive(Debug)]
+pub struct Declaration {
+    pub name: String,
+    value: Option<Expression>,
+}
+
+#[derive(Debug)]
+pub enum BlockItem {
+    Declaration(Declaration),
+    Statement(Statement),
 }
 
 impl fmt::Debug for Program {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let fun = &self.0;
         write!(f, "fn {}() -> {:?}\n\t", fun.name, fun.return_type)?;
-        for statement in &fun.statements {
-            match statement {
-                Statement::Return(exp) => {
-                    write!(f, "RETURN ")?;
-                    Self::write_exp(f, exp)?;
-                }
-                Statement::Declare(name, val) => {
-                    write!(f, "INT {}", name)?;
-                    if val.is_some() {
+        for block_item in &fun.block {
+            match block_item {
+                BlockItem::Declaration(declaration) => {
+                    write!(f, "INT {}", &declaration.name)?;
+                    if declaration.value.is_some() {
                         write!(f, " = ")?;
-                        Self::write_exp(f, val.as_ref().unwrap())?;
+                        Self::write_exp(f, declaration.value.as_ref().unwrap())?;
                     }
                 }
-                Statement::Expression(exp) => Self::write_exp(f, exp)?,
+                BlockItem::Statement(statement) => Self::write_statement(f, statement)?,
             }
-
-            write!(f, "\n\t")?;
         }
 
         Ok(())
@@ -48,6 +54,19 @@ impl fmt::Debug for Program {
 }
 
 impl Program {
+    fn write_statement(f: &mut fmt::Formatter<'_>, statement: &Statement) -> fmt::Result {
+        match statement {
+            Statement::Return(exp) => {
+                write!(f, "RETURN ")?;
+                Self::write_exp(f, exp)?;
+            }
+            Statement::Expression(exp) => Self::write_exp(f, exp)?,
+            Statement::If(_, _, _) => todo!(),
+        }
+
+        write!(f, "\n\t")
+    }
+
     fn write_exp(f: &mut fmt::Formatter<'_>, exp: &Expression) -> fmt::Result {
         match exp {
             Expression::BinaryOp(op, exp1, exp2) => {
