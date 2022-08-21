@@ -96,8 +96,8 @@ impl<'a> Lexer<'a> {
             _ if self.read_multi_char("||") => Token::OR,
             _ if self.read_multi_char("==") => Token::Equal,
             _ if self.read_multi_char("!=") => Token::NotEqual,
-            _ if self.read_multi_char("<=") => Token::LessThanOrEqual,
-            _ if self.read_multi_char(">=") => Token::GreaterThanOrEqual,
+            _ if self.read_multi_char("<=") => Token::LessThanEqual,
+            _ if self.read_multi_char(">=") => Token::GreaterThanEqual,
             _ => Token::Illegal,
         };
 

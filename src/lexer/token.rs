@@ -22,9 +22,9 @@ pub enum Token {
     Equal,
     NotEqual,
     LessThan,
-    LessThanOrEqual,
+    LessThanEqual,
     GreaterThan,
-    GreaterThanOrEqual,
+    GreaterThanEqual,
 
     Assignment,
 

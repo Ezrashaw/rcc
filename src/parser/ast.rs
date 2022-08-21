@@ -53,10 +53,18 @@ impl Program {
             f,
             " {} ",
             match binop {
-                &BinOperator::Addition => '+',
-                &BinOperator::Subtraction => '-',
-                &BinOperator::Multiplication => '*',
-                &BinOperator::Division => '/',
+                &BinOperator::Addition => "+",
+                &BinOperator::Subtraction => "-",
+                &BinOperator::Multiplication => "*",
+                &BinOperator::Division => "/",
+                BinOperator::LessThan => "<",
+                BinOperator::GreaterThan => ">",
+                BinOperator::LessThanOrEqual => "<=",
+                BinOperator::GreaterThanOrEqual => ">=",
+                BinOperator::Equal => "==",
+                BinOperator::NotEqual => "!=",
+                BinOperator::LogicalAND => "&&",
+                BinOperator::LogicalOR => "||",
             }
         )
     }

@@ -113,6 +113,90 @@ impl<'a> Parser<'a> {
     }
 
     fn read_expression(&mut self) -> Expression {
+        let mut exp = self.read_logical_and_exp();
+
+        let mut next_token = self.peek_token();
+        while next_token == &Token::OR {
+            let op = match self.read_token() {
+                &Token::OR => BinOperator::LogicalOR,
+                _ => panic!("Unknown token in read_expression"),
+            };
+
+            let next_exp = self.read_logical_and_exp();
+            exp = Expression::BinaryOp(op, Box::new(exp), Box::new(next_exp));
+
+            next_token = self.peek_token();
+        }
+
+        exp
+    }
+
+    fn read_logical_and_exp(&mut self) -> Expression {
+        let mut exp = self.read_equality_exp();
+
+        let mut next_token = self.peek_token();
+        while next_token == &Token::AND {
+            let op = match self.read_token() {
+                &Token::AND => BinOperator::LogicalAND,
+                _ => panic!("Unknown token in read_logical_and_expression"),
+            };
+
+            let next_exp = self.read_equality_exp();
+            exp = Expression::BinaryOp(op, Box::new(exp), Box::new(next_exp));
+
+            next_token = self.peek_token();
+        }
+
+        exp
+    }
+
+    fn read_equality_exp(&mut self) -> Expression {
+        let mut exp = self.read_relational_exp();
+
+        let mut next_token = self.peek_token();
+        while next_token == &Token::Equal || next_token == &Token::NotEqual {
+            let op = match self.read_token() {
+                &Token::Equal => BinOperator::Equal,
+                &Token::NotEqual => BinOperator::NotEqual,
+                _ => panic!("Unknown token in read_equality_expression"),
+            };
+
+            let next_exp = self.read_relational_exp();
+            exp = Expression::BinaryOp(op, Box::new(exp), Box::new(next_exp));
+
+            next_token = self.peek_token();
+        }
+
+        exp
+    }
+
+    fn read_relational_exp(&mut self) -> Expression {
+        let mut exp = self.read_additive_exp();
+
+        let mut next_token = self.peek_token();
+        while next_token == &Token::LessThan
+            || next_token == &Token::LessThanEqual
+            || next_token == &Token::GreaterThan
+            || next_token == &Token::GreaterThanEqual
+        {
+            let op = match self.read_token() {
+                &Token::LessThan => BinOperator::LessThan,
+                &Token::LessThanEqual => BinOperator::LessThanOrEqual,
+                &Token::GreaterThan => BinOperator::GreaterThan,
+                &Token::GreaterThanEqual => BinOperator::GreaterThanOrEqual,
+                _ => panic!("Unknown token in read_relational_expression"),
+            };
+
+            let next_exp = self.read_additive_exp();
+            exp = Expression::BinaryOp(op, Box::new(exp), Box::new(next_exp));
+
+            next_token = self.peek_token();
+        }
+
+        exp
+    }
+
+    fn read_additive_exp(&mut self) -> Expression {
         let mut term = self.read_term();
 
         let mut next_token = self.peek_token();
@@ -120,7 +204,7 @@ impl<'a> Parser<'a> {
             let op = match self.read_token() {
                 &Token::Addition => BinOperator::Addition,
                 &Token::Minus => BinOperator::Subtraction,
-                _ => panic!("Unknown token in read_expression"),
+                _ => panic!("Unknown token in read_additive_expression"),
             };
 
             let next_term = self.read_term();

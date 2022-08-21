@@ -20,4 +20,14 @@ pub enum BinOperator {
     Addition,
     Multiplication,
     Division,
+
+    LessThan,
+    GreaterThan,
+    LessThanOrEqual,
+    GreaterThanOrEqual,
+
+    Equal,
+    NotEqual,
+    LogicalAND,
+    LogicalOR,
 }
