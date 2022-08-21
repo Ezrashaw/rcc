@@ -36,12 +36,12 @@ impl<'a> Lexer<'a> {
     }
 
     fn peek_char(&self) -> char {
-        let _char = if self.position >= self.input.len() {
+        
+        if self.position >= self.input.len() {
             '\0'
         } else {
             self.input[self.position].into()
-        };
-        _char
+        }
     }
 
     pub fn read_token(&mut self) -> Token {

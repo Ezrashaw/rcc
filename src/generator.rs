@@ -38,7 +38,7 @@ impl<'a> Generator<'a> {
         if let Statement::Return(exp) = statement {
             self.write_expression(exp);
 
-            self.output.push_str(&format!("ret\n"));
+            self.output.push_str("ret\n");
         } else {
             todo!()
         }
@@ -50,25 +50,23 @@ impl<'a> Generator<'a> {
             Expression::UnaryOp(op, exp) => {
                 self.write_expression(exp);
                 match op {
-                    UnaryOperator::Negation => self.output.push_str(&format!("neg %eax\n")),
+                    UnaryOperator::Negation => self.output.push_str("neg %eax\n"),
                     UnaryOperator::BitwiseComplement => {
-                        self.output.push_str(&format!("not %eax\n"))
+                        self.output.push_str("not %eax\n")
                     }
-                    UnaryOperator::LogicalNegation => self.output.push_str(&format!(
-                        "cmpl  $0, %eax\n\
+                    UnaryOperator::LogicalNegation => self.output.push_str("cmpl  $0, %eax\n\
                         movl   $0, %eax\n\
-                        sete   %al\n"
-                    )),
+                        sete   %al\n"),
                 }
             }
             Expression::BinaryOp(op, exp1, exp2) => {
-                self.write_expression(&exp1);
+                self.write_expression(exp1);
                 if op == &BinOperator::LogicalOR || op == &BinOperator::LogicalAND {
                     self.write_logical_exp(op, exp2);
                     return;
                 }
-                self.output.push_str(&format!("push %eax\n"));
-                self.write_expression(&exp2);
+                self.output.push_str("push %eax\n");
+                self.write_expression(exp2);
                 self.write_binop(op);
             }
             Expression::Assign(_, _) => todo!(),

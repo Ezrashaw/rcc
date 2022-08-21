@@ -38,7 +38,7 @@ pub enum Token {
     Literal(Literal),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Keyword {
     Return,
     DataType(CType),
@@ -53,7 +53,7 @@ pub enum Keyword {
     Continue,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Literal {
     Integer(CInteger),
 }

@@ -16,7 +16,7 @@ pub enum UnaryOperator {
     LogicalNegation,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum BinOperator {
     Subtraction,
     Addition,

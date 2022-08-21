@@ -19,9 +19,9 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a [Token]) -> Self {
-        let parser = Self { input, position: 0 };
+        
 
-        parser
+        Self { input, position: 0 }
     }
 
     pub fn read_program(&mut self) -> Program {
@@ -299,6 +299,6 @@ impl<'a> Parser<'a> {
 
         let inner = self.read_factor();
 
-        return Expression::UnaryOp(operator, Box::new(inner));
+        Expression::UnaryOp(operator, Box::new(inner))
     }
 }

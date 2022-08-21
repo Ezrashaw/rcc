@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::ctypes::{CInteger, CType};
+use crate::ctypes::{CType};
 
 use super::expression::{BinOperator, Expression, UnaryOperator};
 
@@ -37,7 +37,7 @@ impl fmt::Debug for Program {
                         Self::write_exp(f, val.as_ref().unwrap())?;
                     }
                 }
-                Statement::Expression(exp) => Self::write_exp(f, &exp)?,
+                Statement::Expression(exp) => Self::write_exp(f, exp)?,
             }
 
             write!(f, "\n\t")?;
@@ -51,13 +51,13 @@ impl Program {
     fn write_exp(f: &mut fmt::Formatter<'_>, exp: &Expression) -> fmt::Result {
         match exp {
             Expression::BinaryOp(op, exp1, exp2) => {
-                Self::write_exp(f, &exp1)?;
-                Self::write_binop(f, &op)?;
-                Self::write_exp(f, &exp2)?;
+                Self::write_exp(f, exp1)?;
+                Self::write_binop(f, op)?;
+                Self::write_exp(f, exp2)?;
             }
             Expression::UnaryOp(op, exp) => {
-                Self::write_unop(f, &op)?;
-                Self::write_exp(f, &exp)?;
+                Self::write_unop(f, op)?;
+                Self::write_exp(f, exp)?;
             }
             Expression::Constant(int) => write!(f, "{int}")?,
             Expression::Assign(name, exp) => {
