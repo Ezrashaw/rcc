@@ -55,7 +55,7 @@ impl<'a> Generator<'a> {
                         self.output.push_str(&format!("not %eax\n"))
                     }
                     UnaryOperator::LogicalNegation => self.output.push_str(&format!(
-                        "cmpl  , %eax\n\
+                        "cmpl  $0, %eax\n\
                         movl   $0, %eax\n\
                         sete   %al\n"
                     )),
