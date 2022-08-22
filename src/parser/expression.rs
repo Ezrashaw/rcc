@@ -7,6 +7,7 @@ pub enum Expression {
     BinaryOp(BinOperator, Box<Expression>, Box<Expression>),
     Assign(String, Box<Expression>),
     Variable(String),
+    Conditional(Box<Expression>, Box<Expression>, Box<Expression>),
 }
 
 #[derive(Debug)]

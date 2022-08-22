@@ -78,6 +78,7 @@ impl Program {
                 Self::write_exp(f, exp)?;
             }
             Expression::Variable(name) => write!(f, "{}", name)?,
+            Expression::Conditional(_, _, _) => todo!(),
         }
 
         Ok(())
