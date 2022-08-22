@@ -1,6 +1,6 @@
 use crate::ctypes::CInteger;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expression {
     Constant(CInteger),
     UnaryOp(UnaryOperator, Box<Expression>),
@@ -10,7 +10,7 @@ pub enum Expression {
     Conditional(Box<Expression>, Box<Expression>, Box<Expression>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum UnaryOperator {
     Negation,
     BitwiseComplement,

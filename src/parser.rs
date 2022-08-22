@@ -160,6 +160,10 @@ impl<'a> Parser<'a> {
             Statement::Expression(self.read_expression())
         };
 
+        if let Statement::Conditional(_, _, _) = statement {
+            return statement;
+        }
+
         if self.read_token() != &Token::Semicolon {
             panic!("Expected semicolon!");
         }
@@ -184,7 +188,25 @@ impl<'a> Parser<'a> {
             }
         }
 
-        self.read_logical_or_exp()
+        self.read_conditional_exp()
+    }
+
+    fn read_conditional_exp(&mut self) -> Expression {
+        let mut exp = self.read_logical_or_exp();
+
+        if self.peek_token() == &Token::QuestionMark {
+            self.read_token();
+
+            let e1 = self.read_expression();
+            if self.read_token() != &Token::Colon {
+                panic!("expected colon in ternary conditional!");
+            }
+            let e2 = self.read_conditional_exp();
+
+            Expression::Conditional(Box::new(exp), Box::new(e1), Box::new(e2))
+        } else {
+            exp
+        }
     }
 
     fn read_logical_or_exp(&mut self) -> Expression {
