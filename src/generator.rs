@@ -10,7 +10,7 @@
 //    stack frame stuff
 //    ret
 
-use std::{collections::HashMap, fmt::Write};
+use std::{collections::HashMap};
 
 use crate::parser::{
     ast::{Program, Statement},
@@ -58,11 +58,9 @@ impl<'a> Generator<'a> {
     }
 
     fn write_fn_pro(&mut self) {
-        self.output.push_str(&format!(
-            "movl %ebp, %esp\n\
+        self.output.push_str("movl %ebp, %esp\n\
             pop %ebp\n\
-            ret\n"
-        ))
+            ret\n")
     }
 
     fn write_statement(&mut self, statement: &'a Statement) {
@@ -75,13 +73,13 @@ impl<'a> Generator<'a> {
                 panic!("Tried to declare variable twice!");
             }
             if exp.is_some() {
-                self.write_expression(&exp.as_ref().unwrap());
+                self.write_expression(exp.as_ref().unwrap());
             } else {
                 self.output.push_str("movl $0, %eax\n");
             }
             self.output.push_str("pushl %eax\n");
             self.stack_index += 4;
-            self.variables.insert(&name, self.stack_index);
+            self.variables.insert(name, self.stack_index);
         } else if let Statement::Expression(exp) = statement {
             self.write_expression(exp);
         }

@@ -1,6 +1,6 @@
 use crate::ctypes::{CInteger, CType};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Illegal,
     OpenBrace,
@@ -17,8 +17,8 @@ pub enum Token {
     Multiplication,
     Division,
 
-    AND,
-    OR,
+    And,
+    Or,
     Equal,
     NotEqual,
     LessThan,

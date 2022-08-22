@@ -91,8 +91,8 @@ impl<'a> Lexer<'a> {
         // matching multi-char tokens
         // TODO: need to look into making this better; we shouldn't use match
         let multi_char = match () {
-            _ if self.read_multi_char("&&") => Token::AND,
-            _ if self.read_multi_char("||") => Token::OR,
+            _ if self.read_multi_char("&&") => Token::And,
+            _ if self.read_multi_char("||") => Token::Or,
             _ if self.read_multi_char("==") => Token::Equal,
             _ if self.read_multi_char("!=") => Token::NotEqual,
             _ if self.read_multi_char("<=") => Token::LessThanEqual,
@@ -167,12 +167,17 @@ impl<'a> Lexer<'a> {
     }
 }
 
+// simple iter pattern for Lexer
+// NOTE: no code currently uses this
 impl Iterator for Lexer<'_> {
+    // we are iterating over tokens
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // read a token
         let token = self.read_token();
 
+        // check whether we have reached EOF
         if token == Token::Illegal {
             None
         } else {

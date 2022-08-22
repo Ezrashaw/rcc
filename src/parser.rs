@@ -82,7 +82,7 @@ impl<'a> Parser<'a> {
                 self.read_token();
                 break;
             }
-            
+
             statements.push(self.read_statement());
         }
         Function {
@@ -149,9 +149,9 @@ impl<'a> Parser<'a> {
         let mut exp = self.read_logical_and_exp();
 
         let mut next_token = self.peek_token();
-        while next_token == &Token::OR {
+        while next_token == &Token::Or {
             let op = match self.read_token() {
-                &Token::OR => BinOperator::LogicalOR,
+                &Token::Or => BinOperator::LogicalOR,
                 _ => panic!("Unknown token in read_expression"),
             };
 
@@ -168,9 +168,9 @@ impl<'a> Parser<'a> {
         let mut exp = self.read_equality_exp();
 
         let mut next_token = self.peek_token();
-        while next_token == &Token::AND {
+        while next_token == &Token::And {
             let op = match self.read_token() {
-                &Token::AND => BinOperator::LogicalAND,
+                &Token::And => BinOperator::LogicalAND,
                 _ => panic!("Unknown token in read_logical_and_expression"),
             };
 
@@ -188,9 +188,9 @@ impl<'a> Parser<'a> {
 
         let mut next_token = self.peek_token();
         while next_token == &Token::Equal || next_token == &Token::NotEqual {
-            let op = match self.read_token() {
-                &Token::Equal => BinOperator::Equal,
-                &Token::NotEqual => BinOperator::NotEqual,
+            let op = match *self.read_token() {
+                Token::Equal => BinOperator::Equal,
+                Token::NotEqual => BinOperator::NotEqual,
                 _ => panic!("Unknown token in read_equality_expression"),
             };
 
