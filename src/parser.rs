@@ -93,7 +93,7 @@ impl<'a> Parser<'a> {
     }
 
     fn read_block_item(&mut self) -> BlockItem {
-        if let Token::Keyword(Keyword::DataType(_)) = self.peek_token() {
+        let item = if let Token::Keyword(Keyword::DataType(_)) = self.peek_token() {
             self.read_token(); // ctype
             let name = self.read_ident();
             let assign = self.peek_token();
@@ -105,7 +105,13 @@ impl<'a> Parser<'a> {
             }
         } else {
             BlockItem::Statement(self.read_statement())
+        };
+
+        if self.read_token() != &Token::Semicolon {
+            panic!("Missing semicolon!");
         }
+
+        item
     }
 
     fn read_statement(&mut self) -> Statement {
@@ -123,11 +129,7 @@ impl<'a> Parser<'a> {
         } else {
             Statement::Expression(self.read_expression())
         };
-
-        if self.read_token() != &Token::Semicolon {
-            panic!("Missing semicolon!");
-        }
-
+        
         statement
     }
 
