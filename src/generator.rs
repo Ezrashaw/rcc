@@ -1,3 +1,15 @@
+// TODO: make `ret` simply jump to the end of the function (allowing us to collapse stack frame logic)
+// this should allow minimal code overhead for returns
+
+// example (psuedo-code C/asm):
+// fn main() -> int {
+//    DO SOMETHING that sets EAX
+//    return/ jump end
+//    clear EAX
+//end:
+//    stack frame stuff
+//    ret
+
 use std::{collections::HashMap, fmt::Write};
 
 use crate::parser::{
