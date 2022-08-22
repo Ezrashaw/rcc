@@ -1,4 +1,4 @@
-// TODO: create some sort of TokenStream or TokenReader and maybe abstract the lexer into that
+// TODO: create some sort of TokenStream or TokenReader and maybe abstract the lexer into that (this could be done with `Iterator`)
 
 use std::{env, fs, path::Path, process::Command};
 

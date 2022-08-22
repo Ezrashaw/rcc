@@ -36,7 +36,6 @@ impl<'a> Lexer<'a> {
     }
 
     fn peek_char(&self) -> char {
-        
         if self.position >= self.input.len() {
             '\0'
         } else {
@@ -165,5 +164,19 @@ impl<'a> Lexer<'a> {
             .iter()
             .map(|ch| *ch as char)
             .collect::<String>()
+    }
+}
+
+impl Iterator for Lexer<'_> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let token = self.read_token();
+
+        if token == Token::Illegal {
+            None
+        } else {
+            Some(token)
+        }
     }
 }
