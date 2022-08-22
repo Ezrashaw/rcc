@@ -17,18 +17,12 @@ pub struct Function {
 pub enum Statement {
     Return(Expression),
     Expression(Expression),
-    If(Expression, Box<Statement>, Option<Box<Statement>>),
-}
-
-#[derive(Debug)]
-pub struct Declaration {
-    pub name: String,
-    value: Option<Expression>,
+    Conditional(Expression, Box<Statement>, Option<Box<Statement>>), // controlling condition, then true, then false
 }
 
 #[derive(Debug)]
 pub enum BlockItem {
-    Declaration(Declaration),
+    Declaration(String, Option<Expression>), // var name, var
     Statement(Statement),
 }
 
@@ -38,11 +32,11 @@ impl fmt::Debug for Program {
         write!(f, "fn {}() -> {:?}\n\t", fun.name, fun.return_type)?;
         for block_item in &fun.block {
             match block_item {
-                BlockItem::Declaration(declaration) => {
-                    write!(f, "INT {}", &declaration.name)?;
-                    if declaration.value.is_some() {
+                BlockItem::Declaration(name, value) => {
+                    write!(f, "INT {}", name)?;
+                    if value.is_some() {
                         write!(f, " = ")?;
-                        Self::write_exp(f, declaration.value.as_ref().unwrap())?;
+                        Self::write_exp(f, value.as_ref().unwrap())?;
                     }
                 }
                 BlockItem::Statement(statement) => Self::write_statement(f, statement)?,
@@ -61,7 +55,7 @@ impl Program {
                 Self::write_exp(f, exp)?;
             }
             Statement::Expression(exp) => Self::write_exp(f, exp)?,
-            Statement::If(_, _, _) => todo!(),
+            Statement::Conditional(_, _, _) => todo!(),
         }
 
         write!(f, "\n\t")
