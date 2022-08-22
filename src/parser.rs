@@ -4,7 +4,7 @@ use crate::{
 };
 
 use self::{
-    ast::{Function, Program, Statement},
+    ast::{BlockItem, Function, Program, Statement},
     expression::{BinOperator, Expression, UnaryOperator},
 };
 
@@ -76,19 +76,35 @@ impl<'a> Parser<'a> {
         if self.read_token() != &Token::OpenBrace {
             panic!("No opening block brace!")
         }
-        let mut statements = vec![];
+        let mut block = vec![];
         loop {
             if self.peek_token() == &Token::CloseBrace {
                 self.read_token();
                 break;
             }
-            
-            statements.push(self.read_statement());
+
+            block.push(self.read_block_item());
         }
         Function {
             name,
             return_type,
-            statements,
+            block,
+        }
+    }
+
+    fn read_block_item(&mut self) -> BlockItem {
+        if let Token::Keyword(Keyword::DataType(_)) = self.peek_token() {
+            self.read_token(); // ctype
+            let name = self.read_ident();
+            let assign = self.peek_token();
+            if assign == &Token::Assignment {
+                self.read_token();
+                BlockItem::Declaration(name, Some(self.read_expression()))
+            } else {
+                BlockItem::Declaration(name, None)
+            }
+        } else {
+            BlockItem::Statement(self.read_statement())
         }
     }
 
@@ -101,16 +117,6 @@ impl<'a> Parser<'a> {
                 let exp = self.read_expression();
 
                 Statement::Return(exp)
-            } else if let Keyword::DataType(_ctype) = keyword {
-                self.read_token();
-                let name = self.read_ident();
-                let assign = self.peek_token();
-                if assign == &Token::Assignment {
-                    self.read_token();
-                    Statement::Declare(name, Some(self.read_expression()))
-                } else {
-                    Statement::Declare(name, None)
-                }
             } else {
                 panic!("Unknown keyword in statement!")
             }
