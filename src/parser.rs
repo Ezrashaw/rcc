@@ -97,19 +97,21 @@ impl<'a> Parser<'a> {
             self.read_token(); // ctype
             let name = self.read_ident();
             let assign = self.peek_token();
-            if assign == &Token::Assignment {
+            let decl = if assign == &Token::Assignment {
                 self.read_token();
                 BlockItem::Declaration(name, Some(self.read_expression()))
             } else {
                 BlockItem::Declaration(name, None)
+            };
+
+            if self.read_token() != &Token::Semicolon {
+                panic!("Missing semicolon!");
             }
+
+            decl
         } else {
             BlockItem::Statement(self.read_statement())
         };
-
-        if self.read_token() != &Token::Semicolon {
-            panic!("Missing semicolon!");
-        }
 
         item
     }
@@ -123,13 +125,45 @@ impl<'a> Parser<'a> {
                 let exp = self.read_expression();
 
                 Statement::Return(exp)
+            } else if keyword == &Keyword::If {
+                self.read_token();
+
+                if self.read_token() != &Token::OpenParen {
+                    panic!("Exprected open bracket!")
+                }
+
+                let controlling = self.read_expression();
+
+                if self.read_token() != &Token::CloseParen {
+                    panic!("Exprected closing bracket!")
+                }
+
+                let statement_true = self.read_statement();
+
+                if self.peek_token() == &Token::Keyword(Keyword::Else) {
+                    self.read_token();
+
+                    let statement_false = self.read_statement();
+
+                    Statement::Conditional(
+                        controlling,
+                        Box::new(statement_true),
+                        Some(Box::new(statement_false)),
+                    )
+                } else {
+                    Statement::Conditional(controlling, Box::new(statement_true), None)
+                }
             } else {
                 panic!("Unknown keyword in statement!")
             }
         } else {
             Statement::Expression(self.read_expression())
         };
-        
+
+        if self.read_token() != &Token::Semicolon {
+            panic!("Expected semicolon!");
+        }
+
         statement
     }
 
