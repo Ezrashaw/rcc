@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, write};
 
 use crate::ctypes::CType;
 
@@ -13,7 +13,7 @@ pub struct Function {
     pub block: Vec<BlockItem>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Statement {
     Return(Expression),
     Expression(Expression),
@@ -38,6 +38,7 @@ impl fmt::Debug for Program {
                         write!(f, " = ")?;
                         Self::write_exp(f, value.as_ref().unwrap())?;
                     }
+                    write!(f, "\n\t")?;
                 }
                 BlockItem::Statement(statement) => Self::write_statement(f, statement)?,
             }
@@ -55,7 +56,16 @@ impl Program {
                 Self::write_exp(f, exp)?;
             }
             Statement::Expression(exp) => Self::write_exp(f, exp)?,
-            Statement::Conditional(_, _, _) => todo!(),
+            Statement::Conditional(controlling, state_true, state_false) => {
+                write!(f, "IF ")?;
+                Self::write_exp(f, controlling)?;
+                write!(f, " THEN\n\t\t")?;
+                Self::write_statement(f, state_true)?;
+                if let Some(state_false) = state_false {
+                    write!(f, "ELSE\n\t\t")?;
+                    Self::write_statement(f, state_false)?;
+                }
+            }
         }
 
         write!(f, "\n\t")
@@ -78,7 +88,14 @@ impl Program {
                 Self::write_exp(f, exp)?;
             }
             Expression::Variable(name) => write!(f, "{}", name)?,
-            Expression::Conditional(_, _, _) => todo!(),
+            Expression::Conditional(controlling, e1, e2) => {
+                write!(f, "IF ")?;
+                Self::write_exp(f, controlling)?;
+                write!(f, " THEN ")?;
+                Self::write_exp(f, e1)?;
+                write!(f, " ELSE ")?;
+                Self::write_exp(f, e2)?;
+            }
         }
 
         Ok(())
