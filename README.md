@@ -10,7 +10,7 @@
 - [x] More maths
 - [ ] All the maths
 - [x] Local variables
-- [ ] Conditionals (`if` statements and ternary `?`)
+- [x] Conditionals (`if` statements and ternary `?`)
 - [ ] Functions
 - [ ] Global variables
 - [ ] More types
