@@ -1,7 +1,7 @@
-use std::{collections::HashMap, fmt::Write};
+use std::collections::HashMap;
 
 use crate::parser::{
-    ast::{Program, Statement},
+    ast::{BlockItem, Program, Statement},
     expression::{BinOperator, Expression, UnaryOperator},
 };
 
@@ -26,8 +26,8 @@ impl<'a> Generator<'a> {
 
     pub fn gen_asm(mut self) -> String {
         self.write_fn_pre(&self.input.0.name);
-        for statement in &self.input.0.statements {
-            self.write_statement(statement);
+        for statement in &self.input.0.block {
+            self.write_block_item(statement);
         }
 
         self.output.push_str("movl $0, %eax\n");
@@ -53,13 +53,11 @@ impl<'a> Generator<'a> {
         ))
     }
 
-    fn write_statement(&mut self, statement: &'a Statement) {
-        if let Statement::Return(exp) = statement {
-            self.write_expression(exp);
-
-            self.write_fn_pro();
-        } else if let Statement::Declare(name, exp) = statement {
-            if self.variables.contains_key(name) {
+    fn write_block_item(&mut self, item: &'a BlockItem) {
+        if let BlockItem::Statement(statement) = item {
+            self.write_statement(&statement);
+        } else if let BlockItem::Declaration(name, exp) = item {
+            if self.variables.contains_key(&name) {
                 panic!("Tried to declare variable twice!");
             }
             if exp.is_some() {
@@ -70,6 +68,14 @@ impl<'a> Generator<'a> {
             self.output.push_str("pushl %eax\n");
             self.stack_index += 4;
             self.variables.insert(&name, self.stack_index);
+        }
+    }
+
+    fn write_statement(&mut self, statement: &'a Statement) {
+        if let Statement::Return(exp) = statement {
+            self.write_expression(exp);
+
+            self.write_fn_pro();
         } else if let Statement::Expression(exp) = statement {
             self.write_expression(exp);
         }
@@ -117,7 +123,27 @@ impl<'a> Generator<'a> {
                 self.output
                     .push_str(&format!("movl -{}(%ebp), %eax\n", offset));
             }
+            Expression::Conditional(exp, e1, e2) => self.write_conditional(exp, e1, e2),
         }
+    }
+
+    fn write_conditional(&mut self, cntrl: &Expression, e1: &Expression, e2: &Expression) {
+        let start_id = self.label_id;
+        self.label_id += 2;
+
+        self.write_expression(cntrl);
+        self.output.push_str(&format!(
+            "cmpl $0, %eax\n\
+            je _{start_id}\n"
+        ));
+        self.write_expression(e1);
+        self.output.push_str(&format!(
+            "jmp _{}\n\
+            _{start_id}:\n",
+            start_id + 1
+        ));
+        self.write_expression(e2);
+        self.output.push_str(&format!("_{}:", start_id + 1));
     }
 
     fn write_binop(&mut self, op: &BinOperator) {
