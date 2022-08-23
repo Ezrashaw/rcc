@@ -13,11 +13,12 @@ pub struct Function {
     pub block: Vec<BlockItem>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub enum Statement {
     Return(Expression),
     Expression(Expression),
     Conditional(Expression, Box<Statement>, Option<Box<Statement>>), // controlling condition, then true, then false
+    Compound(Vec<BlockItem>),
 }
 
 #[derive(Debug)]
@@ -66,6 +67,7 @@ impl Program {
                     Self::write_statement(f, state_false)?;
                 }
             }
+            Statement::Compound(_) => todo!(),
         }
 
         write!(f, "\n\t")

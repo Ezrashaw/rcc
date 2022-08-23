@@ -58,9 +58,11 @@ impl<'a> Generator<'a> {
     }
 
     fn write_fn_pro(&mut self) {
-        self.output.push_str("movl %ebp, %esp\n\
+        self.output.push_str(
+            "movl %ebp, %esp\n\
             pop %ebp\n\
-            ret\n")
+            ret\n",
+        )
     }
 
     fn write_block_item(&mut self, item: &'a BlockItem) {
