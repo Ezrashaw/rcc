@@ -82,12 +82,8 @@ impl<'a> Parser<'a> {
                 self.read_token();
                 break;
             }
-
-<<<<<<< HEAD
-            statements.push(self.read_statement());
-=======
+            
             block.push(self.read_block_item());
->>>>>>> feature/conditionals
         }
         Function {
             name,
