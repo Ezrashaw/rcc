@@ -71,13 +71,20 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn write_statement(&mut self, statement: &'a Statement) {
+    fn write_statement(&mut self, statement: &Statement) {
         if let Statement::Return(exp) = statement {
             self.write_expression(exp);
 
             self.write_fn_pro();
         } else if let Statement::Expression(exp) = statement {
             self.write_expression(exp);
+        } else if let Statement::Conditional(cntrl, state_true, state_false) = statement {
+            if let Some(state_false) = state_false {
+                let state_false = Some(state_false.as_ref()); // wtf is this, we rewrap the Option????
+                self.write_conditional(cntrl, state_true, &state_false);
+            } else {
+                self.write_conditional(cntrl, state_true, &None);
+            }
         }
     }
 
@@ -123,11 +130,11 @@ impl<'a> Generator<'a> {
                 self.output
                     .push_str(&format!("movl -{}(%ebp), %eax\n", offset));
             }
-            Expression::Conditional(exp, e1, e2) => self.write_conditional(exp, e1, e2),
+            Expression::Conditional(exp, e1, e2) => self.write_ternary_conditional(exp, e1, e2),
         }
     }
 
-    fn write_conditional(&mut self, cntrl: &Expression, e1: &Expression, e2: &Expression) {
+    fn write_ternary_conditional(&mut self, cntrl: &Expression, e1: &Expression, e2: &Expression) {
         let start_id = self.label_id;
         self.label_id += 2;
 
@@ -144,6 +151,43 @@ impl<'a> Generator<'a> {
         ));
         self.write_expression(e2);
         self.output.push_str(&format!("_{}:", start_id + 1));
+    }
+
+    fn write_conditional(
+        &mut self,
+        cntrl: &Expression,
+        state_true: &Statement,
+        state_false: &Option<&Statement>,
+    ) {
+        let start_id = self.label_id;
+        self.label_id += if state_false.is_some() { 2 } else { 1 };
+
+        self.write_expression(cntrl);
+        if state_false.is_some() {
+            self.output.push_str(&format!(
+                "cmpl $0, %eax\n\
+                je _{start_id}\n"
+            ));
+
+            self.write_statement(state_true);
+            self.output.push_str(&format!(
+                "jmp _{}\n\
+                _{start_id}:\n",
+                start_id + 1
+            ));
+            self.write_statement(state_false.unwrap());
+
+            self.output.push_str(&format!("_{}:", start_id + 1));
+        } else {
+            self.output.push_str(&format!(
+                "cmpl $0, %eax\n\
+                je _{start_id}\n"
+            ));
+
+            self.write_statement(state_true);
+
+            self.output.push_str(&format!("_{}:", start_id));
+        }
     }
 
     fn write_binop(&mut self, op: &BinOperator) {
