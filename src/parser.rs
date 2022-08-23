@@ -4,7 +4,7 @@ use crate::{
 };
 
 use self::{
-    ast::{Function, Program, Statement},
+    ast::{BlockItem, Function, Program, Statement},
     expression::{BinOperator, Expression, UnaryOperator},
 };
 
@@ -76,20 +76,48 @@ impl<'a> Parser<'a> {
         if self.read_token() != &Token::OpenBrace {
             panic!("No opening block brace!")
         }
-        let mut statements = vec![];
+        let mut block = vec![];
         loop {
             if self.peek_token() == &Token::CloseBrace {
                 self.read_token();
                 break;
             }
 
+<<<<<<< HEAD
             statements.push(self.read_statement());
+=======
+            block.push(self.read_block_item());
+>>>>>>> feature/conditionals
         }
         Function {
             name,
             return_type,
-            statements,
+            block,
         }
+    }
+
+    fn read_block_item(&mut self) -> BlockItem {
+        let item = if let Token::Keyword(Keyword::DataType(_)) = self.peek_token() {
+            self.read_token(); // ctype
+            let name = self.read_ident();
+            let assign = self.peek_token();
+            let decl = if assign == &Token::Assignment {
+                self.read_token();
+                BlockItem::Declaration(name, Some(self.read_expression()))
+            } else {
+                BlockItem::Declaration(name, None)
+            };
+
+            if self.read_token() != &Token::Semicolon {
+                panic!("Missing semicolon!");
+            }
+
+            decl
+        } else {
+            BlockItem::Statement(self.read_statement())
+        };
+
+        item
     }
 
     fn read_statement(&mut self) -> Statement {
@@ -101,15 +129,33 @@ impl<'a> Parser<'a> {
                 let exp = self.read_expression();
 
                 Statement::Return(exp)
-            } else if let Keyword::DataType(_ctype) = keyword {
+            } else if keyword == &Keyword::If {
                 self.read_token();
-                let name = self.read_ident();
-                let assign = self.peek_token();
-                if assign == &Token::Assignment {
+
+                if self.read_token() != &Token::OpenParen {
+                    panic!("Exprected open bracket!")
+                }
+
+                let controlling = self.read_expression();
+
+                if self.read_token() != &Token::CloseParen {
+                    panic!("Exprected closing bracket!")
+                }
+
+                let statement_true = self.read_statement();
+
+                if self.peek_token() == &Token::Keyword(Keyword::Else) {
                     self.read_token();
-                    Statement::Declare(name, Some(self.read_expression()))
+
+                    let statement_false = self.read_statement();
+
+                    Statement::Conditional(
+                        controlling,
+                        Box::new(statement_true),
+                        Some(Box::new(statement_false)),
+                    )
                 } else {
-                    Statement::Declare(name, None)
+                    Statement::Conditional(controlling, Box::new(statement_true), None)
                 }
             } else {
                 panic!("Unknown keyword in statement!")
@@ -118,8 +164,12 @@ impl<'a> Parser<'a> {
             Statement::Expression(self.read_expression())
         };
 
+        if let Statement::Conditional(_, _, _) = statement {
+            return statement;
+        }
+
         if self.read_token() != &Token::Semicolon {
-            panic!("Missing semicolon!");
+            panic!("Expected semicolon!");
         }
 
         statement
@@ -142,7 +192,25 @@ impl<'a> Parser<'a> {
             }
         }
 
-        self.read_logical_or_exp()
+        self.read_conditional_exp()
+    }
+
+    fn read_conditional_exp(&mut self) -> Expression {
+        let mut exp = self.read_logical_or_exp();
+
+        if self.peek_token() == &Token::QuestionMark {
+            self.read_token();
+
+            let e1 = self.read_expression();
+            if self.read_token() != &Token::Colon {
+                panic!("expected colon in ternary conditional!");
+            }
+            let e2 = self.read_conditional_exp();
+
+            Expression::Conditional(Box::new(exp), Box::new(e1), Box::new(e2))
+        } else {
+            exp
+        }
     }
 
     fn read_logical_or_exp(&mut self) -> Expression {

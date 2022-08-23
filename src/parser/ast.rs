@@ -1,6 +1,6 @@
-use std::fmt;
+use std::fmt::{self, write};
 
-use crate::ctypes::{CType};
+use crate::ctypes::CType;
 
 use super::expression::{BinOperator, Expression, UnaryOperator};
 
@@ -10,37 +10,38 @@ pub struct Program(pub Function);
 pub struct Function {
     pub name: String,
     pub return_type: CType,
-    pub statements: Vec<Statement>,
+    pub block: Vec<BlockItem>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Statement {
+    Return(Expression),
+    Expression(Expression),
+    Conditional(Expression, Box<Statement>, Option<Box<Statement>>), // controlling condition, then true, then false
 }
 
 #[derive(Debug)]
-pub enum Statement {
-    Return(Expression),
-    Declare(String, Option<Expression>),
-    Expression(Expression),
+pub enum BlockItem {
+    Declaration(String, Option<Expression>), // var name, var
+    Statement(Statement),
 }
 
 impl fmt::Debug for Program {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let fun = &self.0;
         write!(f, "fn {}() -> {:?}\n\t", fun.name, fun.return_type)?;
-        for statement in &fun.statements {
-            match statement {
-                Statement::Return(exp) => {
-                    write!(f, "RETURN ")?;
-                    Self::write_exp(f, exp)?;
-                }
-                Statement::Declare(name, val) => {
+        for block_item in &fun.block {
+            match block_item {
+                BlockItem::Declaration(name, value) => {
                     write!(f, "INT {}", name)?;
-                    if val.is_some() {
+                    if value.is_some() {
                         write!(f, " = ")?;
-                        Self::write_exp(f, val.as_ref().unwrap())?;
+                        Self::write_exp(f, value.as_ref().unwrap())?;
                     }
+                    write!(f, "\n\t")?;
                 }
-                Statement::Expression(exp) => Self::write_exp(f, exp)?,
+                BlockItem::Statement(statement) => Self::write_statement(f, statement)?,
             }
-
-            write!(f, "\n\t")?;
         }
 
         Ok(())
@@ -48,6 +49,28 @@ impl fmt::Debug for Program {
 }
 
 impl Program {
+    fn write_statement(f: &mut fmt::Formatter<'_>, statement: &Statement) -> fmt::Result {
+        match statement {
+            Statement::Return(exp) => {
+                write!(f, "RETURN ")?;
+                Self::write_exp(f, exp)?;
+            }
+            Statement::Expression(exp) => Self::write_exp(f, exp)?,
+            Statement::Conditional(controlling, state_true, state_false) => {
+                write!(f, "IF ")?;
+                Self::write_exp(f, controlling)?;
+                write!(f, " THEN\n\t\t")?;
+                Self::write_statement(f, state_true)?;
+                if let Some(state_false) = state_false {
+                    write!(f, "ELSE\n\t\t")?;
+                    Self::write_statement(f, state_false)?;
+                }
+            }
+        }
+
+        write!(f, "\n\t")
+    }
+
     fn write_exp(f: &mut fmt::Formatter<'_>, exp: &Expression) -> fmt::Result {
         match exp {
             Expression::BinaryOp(op, exp1, exp2) => {
@@ -65,6 +88,14 @@ impl Program {
                 Self::write_exp(f, exp)?;
             }
             Expression::Variable(name) => write!(f, "{}", name)?,
+            Expression::Conditional(controlling, e1, e2) => {
+                write!(f, "IF ")?;
+                Self::write_exp(f, controlling)?;
+                write!(f, " THEN ")?;
+                Self::write_exp(f, e1)?;
+                write!(f, " ELSE ")?;
+                Self::write_exp(f, e2)?;
+            }
         }
 
         Ok(())
