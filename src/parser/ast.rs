@@ -32,17 +32,7 @@ impl fmt::Debug for Program {
         let fun = &self.0;
         write!(f, "fn {}() -> {:?}\n\t", fun.name, fun.return_type)?;
         for block_item in &fun.block {
-            match block_item {
-                BlockItem::Declaration(name, value) => {
-                    write!(f, "INT {}", name)?;
-                    if value.is_some() {
-                        write!(f, " = ")?;
-                        Self::write_exp(f, value.as_ref().unwrap())?;
-                    }
-                    write!(f, "\n\t")?;
-                }
-                BlockItem::Statement(statement) => Self::write_statement(f, statement)?,
-            }
+            Self::write_block_item(f, block_item)?;
         }
 
         Ok(())
@@ -50,6 +40,22 @@ impl fmt::Debug for Program {
 }
 
 impl Program {
+    fn write_block_item(f: &mut fmt::Formatter<'_>, block_item: &BlockItem) -> fmt::Result {
+        match block_item {
+            BlockItem::Declaration(name, value) => {
+                write!(f, "INT {}", name)?;
+                if value.is_some() {
+                    write!(f, " = ")?;
+                    Self::write_exp(f, value.as_ref().unwrap())?;
+                }
+                write!(f, "\n\t")?;
+            }
+            BlockItem::Statement(statement) => Self::write_statement(f, statement)?,
+        }
+
+        Ok(())
+    }
+
     fn write_statement(f: &mut fmt::Formatter<'_>, statement: &Statement) -> fmt::Result {
         match statement {
             Statement::Return(exp) => {
@@ -60,14 +66,20 @@ impl Program {
             Statement::Conditional(controlling, state_true, state_false) => {
                 write!(f, "IF ")?;
                 Self::write_exp(f, controlling)?;
-                write!(f, " THEN\n\t\t")?;
+                write!(f, " THEN\n\t")?;
                 Self::write_statement(f, state_true)?;
                 if let Some(state_false) = state_false {
-                    write!(f, "ELSE\n\t\t")?;
+                    write!(f, "ELSE\n\t")?;
                     Self::write_statement(f, state_false)?;
                 }
             }
-            Statement::Compound(_) => todo!(),
+            Statement::Compound(statements) => {
+                write!(f, "BLOCK\n\t")?;
+                for block_item in statements {
+                    Self::write_block_item(f, block_item)?;
+                }
+                write!(f, "END BLOCK\n\t")?;
+            }
         }
 
         write!(f, "\n\t")
