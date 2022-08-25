@@ -73,23 +73,33 @@ impl<'a> Parser<'a> {
         let return_type = self.read_type();
         let name = self.read_ident();
         self.read_args();
-        if self.read_token() != &Token::OpenBrace {
-            panic!("No opening block brace!")
-        }
-        let mut block = vec![];
-        loop {
-            if self.peek_token() == &Token::CloseBrace {
-                self.read_token();
-                break;
-            }
-            
-            block.push(self.read_block_item());
-        }
+
+        let block = self.read_block();
+
         Function {
             name,
             return_type,
             block,
         }
+    }
+
+    fn read_block(&mut self) -> Vec<BlockItem> {
+        let mut block = vec![];
+
+        if self.read_token() != &Token::OpenBrace {
+            panic!("No opening block brace!")
+        }
+
+        loop {
+            if self.peek_token() == &Token::CloseBrace {
+                self.read_token();
+                break;
+            }
+
+            block.push(self.read_block_item());
+        }
+
+        block
     }
 
     fn read_block_item(&mut self) -> BlockItem {
@@ -156,11 +166,16 @@ impl<'a> Parser<'a> {
             } else {
                 panic!("Unknown keyword in statement!")
             }
+        } else if let Token::OpenBrace = token {
+            Statement::Compound(self.read_block())
         } else {
             Statement::Expression(self.read_expression())
         };
 
-        if let Statement::Conditional(_, _, _) = statement {
+        if matches!(
+            statement,
+            Statement::Compound(_) | Statement::Conditional(..)
+        ) {
             return statement;
         }
 
