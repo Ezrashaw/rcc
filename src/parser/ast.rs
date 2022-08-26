@@ -56,7 +56,7 @@ impl fmt::Debug for Program {
 impl Program {
     fn write_block_item(f: &mut fmt::Formatter<'_>, block_item: &BlockItem) -> fmt::Result {
         match block_item {
-            BlockItem::Declaration(name, value) => {
+            BlockItem::Declaration(Declaration(name, value)) => {
                 write!(f, "INT {}", name)?;
                 if value.is_some() {
                     write!(f, " = ")?;
@@ -98,6 +98,20 @@ impl Program {
                 }
                 write!(f, "END BLOCK\n\t")?;
             }
+            Statement::For(_, _, _, _) => todo!(),
+            Statement::ForDecl(_, _, _, _) => todo!(),
+            Statement::While(controlling, statement) => {
+                write!(f, "WHILE ")?;
+                Self::write_exp(f, controlling)?;
+                Self::write_statement(f, statement)?;
+            }
+            Statement::Do(statement, controlling) => {
+                write!(f, "DO WHILE ")?;
+                Self::write_exp(f, controlling)?;
+                Self::write_statement(f, statement)?;
+            }
+            Statement::Break => write!(f, "BREAK")?,
+            Statement::Continue => write!(f, "CONTINUE")?,
         }
 
         write!(f, "\n\t")
