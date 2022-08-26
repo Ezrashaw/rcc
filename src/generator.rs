@@ -32,7 +32,7 @@ impl<'a> Generator<'a> {
             input,
             output: String::new(),
             label_id: 0,
-            stack_index: 0,
+            stack_index: 4,
         }
     }
 
@@ -65,16 +65,27 @@ impl<'a> Generator<'a> {
     }
 
     fn write_block(&mut self, block: &'a Vec<BlockItem>, vars: &mut HashMap<&'a String, u32>) {
+        let mut current_scope = HashMap::new();
+
         for item in block {
-            self.write_block_item(item, vars);
+            self.write_block_item(item, vars, &mut current_scope);
         }
+
+        let bytes_to_dealloc = 4 * current_scope.len();
+        self.output
+            .push_str(&format!("addl ${}, %esp\n", bytes_to_dealloc));
     }
 
-    fn write_block_item(&mut self, item: &'a BlockItem, vars: &mut HashMap<&'a String, u32>) {
+    fn write_block_item(
+        &mut self,
+        item: &'a BlockItem,
+        vars: &mut HashMap<&'a String, u32>,
+        current_scope: &mut HashMap<&'a String, u32>,
+    ) {
         if let BlockItem::Statement(statement) = item {
             self.write_statement(&statement, vars);
         } else if let BlockItem::Declaration(name, exp) = item {
-            if vars.contains_key(&name) {
+            if current_scope.contains_key(&name) {
                 panic!("Tried to declare variable twice!");
             }
             if exp.is_some() {
@@ -83,8 +94,9 @@ impl<'a> Generator<'a> {
                 self.output.push_str("movl $0, %eax\n");
             }
             self.output.push_str("pushl %eax\n");
-            self.stack_index += 4;
             vars.insert(&name, self.stack_index);
+            current_scope.insert(&name, self.stack_index);
+            self.stack_index += 4;
         }
     }
 
@@ -103,7 +115,7 @@ impl<'a> Generator<'a> {
                 self.write_conditional(cntrl, state_true, None, vars);
             }
         } else if let Statement::Compound(block) = statement {
-            self.write_block(block, vars);
+            self.write_block(block, &mut vars.clone());
         }
     }
 
