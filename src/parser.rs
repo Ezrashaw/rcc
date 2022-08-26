@@ -23,7 +23,13 @@ impl<'a> Parser<'a> {
     }
 
     pub fn read_program(&mut self) -> Program {
-        Program(self.read_function())
+        let function = self.read_function();
+
+        if self.position < self.input.len() {
+            panic!("unexpected tokens!");
+        }
+
+        Program(function)
     }
 
     fn read_token(&mut self) -> &Token {
@@ -82,7 +88,7 @@ impl<'a> Parser<'a> {
                 self.read_token();
                 break;
             }
-            
+
             block.push(self.read_block_item());
         }
         Function {
