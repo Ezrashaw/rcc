@@ -169,6 +169,10 @@ impl<'a> Parser<'a> {
                 } else {
                     Statement::Conditional(controlling, Box::new(statement_true), None)
                 }
+            } else if keyword == &Keyword::Break {
+                Statement::Break
+            } else if keyword == &Keyword::Continue {
+                Statement::Continue
             } else {
                 panic!("Unknown keyword in statement!")
             }
