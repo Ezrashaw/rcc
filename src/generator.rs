@@ -15,7 +15,7 @@
 use std::collections::HashMap;
 
 use crate::parser::{
-    ast::{BlockItem, Program, Statement},
+    ast::{BlockItem, Declaration, Program, Statement},
     expression::{BinOperator, Expression, UnaryOperator},
 };
 
@@ -85,7 +85,7 @@ impl<'a> Generator<'a> {
     ) {
         if let BlockItem::Statement(statement) = item {
             self.write_statement(statement, vars);
-        } else if let BlockItem::Declaration(name, exp) = item {
+        } else if let BlockItem::Declaration(Declaration(name, exp)) = item {
             if current_scope.contains_key(&name) {
                 panic!("Tried to declare variable twice!");
             }

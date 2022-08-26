@@ -22,8 +22,11 @@ pub enum Statement {
 }
 
 #[derive(Debug)]
+pub struct Declaration(pub String, pub Option<Expression>); // variable name, optional value
+
+#[derive(Debug)]
 pub enum BlockItem {
-    Declaration(String, Option<Expression>), // var name, var
+    Declaration(Declaration),
     Statement(Statement),
 }
 

@@ -4,7 +4,7 @@ use crate::{
 };
 
 use self::{
-    ast::{BlockItem, Function, Program, Statement},
+    ast::{BlockItem, Declaration, Function, Program, Statement},
     expression::{BinOperator, Expression, UnaryOperator},
 };
 
@@ -115,9 +115,9 @@ impl<'a> Parser<'a> {
             let assign = self.peek_token();
             let decl = if assign == &Token::Assignment {
                 self.read_token();
-                BlockItem::Declaration(name, Some(self.read_expression()))
+                BlockItem::Declaration(Declaration(name, Some(self.read_expression())))
             } else {
-                BlockItem::Declaration(name, None)
+                BlockItem::Declaration(Declaration(name, None))
             };
 
             if self.read_token() != &Token::Semicolon {
