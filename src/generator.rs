@@ -84,7 +84,7 @@ impl<'a> Generator<'a> {
         current_scope: &mut HashMap<&'a String, usize>,
     ) {
         if let BlockItem::Statement(statement) = item {
-            self.write_statement(&statement, vars);
+            self.write_statement(statement, vars);
         } else if let BlockItem::Declaration(name, exp) = item {
             if current_scope.contains_key(&name) {
                 panic!("Tried to declare variable twice!");
@@ -95,8 +95,8 @@ impl<'a> Generator<'a> {
                 self.output.push_str("movl $0, %eax\n");
             }
             self.output.push_str("pushl %eax\n");
-            vars.insert(&name, self.stack_index);
-            current_scope.insert(&name, self.stack_index);
+            vars.insert(name, self.stack_index);
+            current_scope.insert(name, self.stack_index);
             self.stack_index += 4;
         }
     }

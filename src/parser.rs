@@ -213,7 +213,7 @@ impl<'a> Parser<'a> {
     }
 
     fn read_conditional_exp(&mut self) -> Expression {
-        let mut exp = self.read_logical_or_exp();
+        let exp = self.read_logical_or_exp();
 
         if self.peek_token() == &Token::QuestionMark {
             self.read_token();
