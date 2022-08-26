@@ -5,12 +5,14 @@
 ---
 
 ## Milestones
-- [x] Can compile extremely basic C program
+- [x] It runs!
+- [x] `return` statement
 - [x] Maths in C
 - [x] More maths
 - [ ] All the maths
 - [x] Local variables
 - [x] Conditionals (`if` statements and ternary `?`)
+- [x] Blocks (fancy: Compound statements)
 - [ ] Functions
 - [ ] Global variables
 - [ ] More types
