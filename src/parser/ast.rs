@@ -19,6 +19,17 @@ pub enum Statement {
     Expression(Option<Expression>),
     Conditional(Expression, Box<Statement>, Option<Box<Statement>>), // controlling condition, then true, then false
     Compound(Vec<BlockItem>),
+    For(
+        Option<Expression>,
+        Expression,
+        Option<Expression>,
+        Box<Statement>,
+    ), // initial expression, condition, post-expression, body
+    ForDecl(Declaration, Expression, Option<Expression>, Box<Statement>), // initial declaration, condition, post-expression, body
+    While(Expression, Box<Statement>),                                    // condition, body
+    Do(Box<Statement>, Expression),                                       // body, condition
+    Break,
+    Continue,
 }
 
 #[derive(Debug)]
