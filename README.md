@@ -1,4 +1,4 @@
-# 🚀 An Unnamed C Compiler in Rust 🚀
+# 🚀 RCC (Rust C Compiler) 🚀
 
 ## A simple C compiler written in pure Rust
 
