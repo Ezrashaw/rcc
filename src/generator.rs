@@ -40,9 +40,8 @@ impl<'a> Generator<'a> {
 
     pub fn gen_asm(mut self) -> String {
         self.write_fn_pre(&self.input.0.name);
-        for statement in &self.input.0.block {
-            self.write_block_item(statement);
-        }
+
+        self.write_block(&self.input.0.block);
 
         self.output.push_str("movl $0, %eax\n");
         self.write_fn_pro();
@@ -65,6 +64,12 @@ impl<'a> Generator<'a> {
             pop %ebp\n\
             ret\n",
         )
+    }
+
+    fn write_block(&mut self, block: &'a Vec<BlockItem>) {
+        for item in block {
+            self.write_block_item(item);
+        }
     }
 
     fn write_block_item(&mut self, item: &'a BlockItem) {
@@ -99,6 +104,8 @@ impl<'a> Generator<'a> {
             } else {
                 self.write_conditional(cntrl, state_true, None);
             }
+        } else if let Statement::Compound(block) = statement {
+            self.write_block(block);
         }
     }
 
@@ -196,7 +203,7 @@ impl<'a> Generator<'a> {
             ));
             self.write_statement(state_false.unwrap());
 
-            self.output.push_str(&format!("_{}:", start_id + 1));
+            self.output.push_str(&format!("_{}:\n", start_id + 1));
         } else {
             self.output.push_str(&format!(
                 "cmpl $0, %eax\n\
@@ -205,7 +212,7 @@ impl<'a> Generator<'a> {
 
             self.write_statement(state_true);
 
-            self.output.push_str(&format!("_{}:", start_id));
+            self.output.push_str(&format!("_{}:\n", start_id));
         }
     }
 
