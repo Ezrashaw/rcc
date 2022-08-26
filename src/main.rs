@@ -1,5 +1,9 @@
 // TODO: create some sort of TokenStream or TokenReader and maybe abstract the lexer into that (this could be done with `Iterator`)
 
+// TODO: implement a tree for variables, instead of the bad hashmap system we currently use.
+
+// TODO: create an IR
+
 use std::{env, fs, path::Path, process::Command};
 
 use generator::Generator;
