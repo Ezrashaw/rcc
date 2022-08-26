@@ -16,7 +16,7 @@ pub struct Function {
 #[derive(Debug)]
 pub enum Statement {
     Return(Expression),
-    Expression(Expression),
+    Expression(Option<Expression>),
     Conditional(Expression, Box<Statement>, Option<Box<Statement>>), // controlling condition, then true, then false
     Compound(Vec<BlockItem>),
 }
@@ -62,7 +62,11 @@ impl Program {
                 write!(f, "RETURN ")?;
                 Self::write_exp(f, exp)?;
             }
-            Statement::Expression(exp) => Self::write_exp(f, exp)?,
+            Statement::Expression(exp) => {
+                if exp.is_some() {
+                    Self::write_exp(f, exp.as_ref().unwrap())?;
+                }
+            }
             Statement::Conditional(controlling, state_true, state_false) => {
                 write!(f, "IF ")?;
                 Self::write_exp(f, controlling)?;

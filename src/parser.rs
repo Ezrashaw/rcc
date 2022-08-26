@@ -175,7 +175,7 @@ impl<'a> Parser<'a> {
         } else if let Token::OpenBrace = token {
             Statement::Compound(self.read_block())
         } else {
-            Statement::Expression(self.read_expression())
+            Statement::Expression(self.read_optional_exp())
         };
 
         if matches!(
@@ -190,6 +190,14 @@ impl<'a> Parser<'a> {
         }
 
         statement
+    }
+
+    fn read_optional_exp(&mut self) -> Option<Expression> {
+        if self.peek_token() == &Token::Semicolon {
+            None
+        } else {
+            Some(self.read_expression())
+        }
     }
 
     fn read_expression(&mut self) -> Expression {

@@ -107,7 +107,9 @@ impl<'a> Generator<'a> {
 
             self.write_fn_pro();
         } else if let Statement::Expression(exp) = statement {
-            self.write_expression(exp, vars);
+            if let Some(exp) = exp {
+                self.write_expression(exp, vars);
+            }
         } else if let Statement::Conditional(cntrl, state_true, state_false) = statement {
             if let Some(state_false) = state_false {
                 let state_false = Some(state_false.as_ref()); // wtf is this, we rewrap the Option????
