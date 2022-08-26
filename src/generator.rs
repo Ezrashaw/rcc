@@ -10,6 +10,8 @@
 //    stack frame stuff
 //    ret
 
+// TODO: fix the lifetimes!
+
 use std::collections::HashMap;
 
 use crate::parser::{
@@ -83,7 +85,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn write_statement(&mut self, statement: &Statement) {
+    fn write_statement(&mut self, statement: &'a Statement) {
         if let Statement::Return(exp) = statement {
             self.write_expression(exp);
 
@@ -93,14 +95,14 @@ impl<'a> Generator<'a> {
         } else if let Statement::Conditional(cntrl, state_true, state_false) = statement {
             if let Some(state_false) = state_false {
                 let state_false = Some(state_false.as_ref()); // wtf is this, we rewrap the Option????
-                self.write_conditional(cntrl, state_true, &state_false);
+                self.write_conditional(cntrl, state_true, state_false);
             } else {
-                self.write_conditional(cntrl, state_true, &None);
+                self.write_conditional(cntrl, state_true, None);
             }
         }
     }
 
-    fn write_expression(&mut self, exp: &Expression) {
+    fn write_expression(&mut self, exp: &'a Expression) {
         match exp {
             Expression::Constant(int) => self.output.push_str(&format!("movl ${}, %eax\n", int)),
             Expression::UnaryOp(op, exp) => {
@@ -146,7 +148,12 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn write_ternary_conditional(&mut self, cntrl: &Expression, e1: &Expression, e2: &Expression) {
+    fn write_ternary_conditional(
+        &mut self,
+        cntrl: &'a Expression,
+        e1: &'a Expression,
+        e2: &'a Expression,
+    ) {
         let start_id = self.label_id;
         self.label_id += 2;
 
@@ -162,14 +169,14 @@ impl<'a> Generator<'a> {
             start_id + 1
         ));
         self.write_expression(e2);
-        self.output.push_str(&format!("_{}:", start_id + 1));
+        self.output.push_str(&format!("_{}:\n", start_id + 1));
     }
 
     fn write_conditional(
         &mut self,
-        cntrl: &Expression,
-        state_true: &Statement,
-        state_false: &Option<&Statement>,
+        cntrl: &'a Expression,
+        state_true: &'a Statement,
+        state_false: Option<&'a Statement>,
     ) {
         let start_id = self.label_id;
         self.label_id += if state_false.is_some() { 2 } else { 1 };
@@ -250,7 +257,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn write_logical_exp(&mut self, op: &BinOperator, exp: &Expression) {
+    fn write_logical_exp(&mut self, op: &'a BinOperator, exp: &'a Expression) {
         let id_clause2 = self.label_id;
         let id_end = id_clause2 + 1;
         self.label_id += 2;
