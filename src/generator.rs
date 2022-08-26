@@ -23,7 +23,6 @@ pub struct Generator<'a> {
     input: &'a Program,
     output: String,
     label_id: u32,
-    variables: HashMap<&'a String, u32>, // name and offset
     stack_index: u32,
 }
 
@@ -33,7 +32,6 @@ impl<'a> Generator<'a> {
             input,
             output: String::new(),
             label_id: 0,
-            variables: HashMap::new(),
             stack_index: 0,
         }
     }
@@ -41,7 +39,7 @@ impl<'a> Generator<'a> {
     pub fn gen_asm(mut self) -> String {
         self.write_fn_pre(&self.input.0.name);
 
-        self.write_block(&self.input.0.block);
+        self.write_block(&self.input.0.block, &mut HashMap::new());
 
         self.output.push_str("movl $0, %eax\n");
         self.write_fn_pro();
@@ -66,54 +64,54 @@ impl<'a> Generator<'a> {
         )
     }
 
-    fn write_block(&mut self, block: &'a Vec<BlockItem>) {
+    fn write_block(&mut self, block: &'a Vec<BlockItem>, vars: &mut HashMap<&'a String, u32>) {
         for item in block {
-            self.write_block_item(item);
+            self.write_block_item(item, vars);
         }
     }
 
-    fn write_block_item(&mut self, item: &'a BlockItem) {
+    fn write_block_item(&mut self, item: &'a BlockItem, vars: &mut HashMap<&'a String, u32>) {
         if let BlockItem::Statement(statement) = item {
-            self.write_statement(&statement);
+            self.write_statement(&statement, vars);
         } else if let BlockItem::Declaration(name, exp) = item {
-            if self.variables.contains_key(&name) {
+            if vars.contains_key(&name) {
                 panic!("Tried to declare variable twice!");
             }
             if exp.is_some() {
-                self.write_expression(exp.as_ref().unwrap());
+                self.write_expression(exp.as_ref().unwrap(), vars);
             } else {
                 self.output.push_str("movl $0, %eax\n");
             }
             self.output.push_str("pushl %eax\n");
             self.stack_index += 4;
-            self.variables.insert(&name, self.stack_index);
+            vars.insert(&name, self.stack_index);
         }
     }
 
-    fn write_statement(&mut self, statement: &'a Statement) {
+    fn write_statement(&mut self, statement: &'a Statement, vars: &mut HashMap<&'a String, u32>) {
         if let Statement::Return(exp) = statement {
-            self.write_expression(exp);
+            self.write_expression(exp, vars);
 
             self.write_fn_pro();
         } else if let Statement::Expression(exp) = statement {
-            self.write_expression(exp);
+            self.write_expression(exp, vars);
         } else if let Statement::Conditional(cntrl, state_true, state_false) = statement {
             if let Some(state_false) = state_false {
                 let state_false = Some(state_false.as_ref()); // wtf is this, we rewrap the Option????
-                self.write_conditional(cntrl, state_true, state_false);
+                self.write_conditional(cntrl, state_true, state_false, vars);
             } else {
-                self.write_conditional(cntrl, state_true, None);
+                self.write_conditional(cntrl, state_true, None, vars);
             }
         } else if let Statement::Compound(block) = statement {
-            self.write_block(block);
+            self.write_block(block, vars);
         }
     }
 
-    fn write_expression(&mut self, exp: &'a Expression) {
+    fn write_expression(&mut self, exp: &'a Expression, vars: &mut HashMap<&'a String, u32>) {
         match exp {
             Expression::Constant(int) => self.output.push_str(&format!("movl ${}, %eax\n", int)),
             Expression::UnaryOp(op, exp) => {
-                self.write_expression(exp);
+                self.write_expression(exp, vars);
                 match op {
                     UnaryOperator::Negation => self.output.push_str("neg %eax\n"),
                     UnaryOperator::BitwiseComplement => self.output.push_str("not %eax\n"),
@@ -125,33 +123,35 @@ impl<'a> Generator<'a> {
                 }
             }
             Expression::BinaryOp(op, exp1, exp2) => {
-                self.write_expression(exp1);
+                self.write_expression(exp1, vars);
                 if op == &BinOperator::LogicalOR || op == &BinOperator::LogicalAND {
-                    self.write_logical_exp(op, exp2);
+                    self.write_logical_exp(op, exp2, vars);
                     return;
                 }
                 self.output.push_str("push %eax\n");
-                self.write_expression(exp2);
+                self.write_expression(exp2, vars);
                 self.write_binop(op);
             }
             Expression::Assign(name, exp) => {
-                self.write_expression(exp);
-                if !self.variables.contains_key(name) {
+                self.write_expression(exp, vars);
+                if !vars.contains_key(name) {
                     panic!("undefined variable!");
                 }
-                let offset = self.variables.get(name).unwrap();
+                let offset = vars.get(name).unwrap();
                 self.output
                     .push_str(&format!("movl %eax, -{}(%ebp)\n", offset));
             }
             Expression::Variable(name) => {
-                if !self.variables.contains_key(name) {
+                if !vars.contains_key(name) {
                     panic!("undefined variable!");
                 }
-                let offset = self.variables.get(name).unwrap();
+                let offset = vars.get(name).unwrap();
                 self.output
                     .push_str(&format!("movl -{}(%ebp), %eax\n", offset));
             }
-            Expression::Conditional(exp, e1, e2) => self.write_ternary_conditional(exp, e1, e2),
+            Expression::Conditional(exp, e1, e2) => {
+                self.write_ternary_conditional(exp, e1, e2, vars)
+            }
         }
     }
 
@@ -160,22 +160,23 @@ impl<'a> Generator<'a> {
         cntrl: &'a Expression,
         e1: &'a Expression,
         e2: &'a Expression,
+        vars: &mut HashMap<&'a String, u32>,
     ) {
         let start_id = self.label_id;
         self.label_id += 2;
 
-        self.write_expression(cntrl);
+        self.write_expression(cntrl, vars);
         self.output.push_str(&format!(
             "cmpl $0, %eax\n\
             je _{start_id}\n"
         ));
-        self.write_expression(e1);
+        self.write_expression(e1, vars);
         self.output.push_str(&format!(
             "jmp _{}\n\
             _{start_id}:\n",
             start_id + 1
         ));
-        self.write_expression(e2);
+        self.write_expression(e2, vars);
         self.output.push_str(&format!("_{}:\n", start_id + 1));
     }
 
@@ -184,24 +185,25 @@ impl<'a> Generator<'a> {
         cntrl: &'a Expression,
         state_true: &'a Statement,
         state_false: Option<&'a Statement>,
+        vars: &mut HashMap<&'a String, u32>,
     ) {
         let start_id = self.label_id;
         self.label_id += if state_false.is_some() { 2 } else { 1 };
 
-        self.write_expression(cntrl);
+        self.write_expression(cntrl, vars);
         if state_false.is_some() {
             self.output.push_str(&format!(
                 "cmpl $0, %eax\n\
                 je _{start_id}\n"
             ));
 
-            self.write_statement(state_true);
+            self.write_statement(state_true, vars);
             self.output.push_str(&format!(
                 "jmp _{}\n\
                 _{start_id}:\n",
                 start_id + 1
             ));
-            self.write_statement(state_false.unwrap());
+            self.write_statement(state_false.unwrap(), vars);
 
             self.output.push_str(&format!("_{}:\n", start_id + 1));
         } else {
@@ -210,7 +212,7 @@ impl<'a> Generator<'a> {
                 je _{start_id}\n"
             ));
 
-            self.write_statement(state_true);
+            self.write_statement(state_true, vars);
 
             self.output.push_str(&format!("_{}:\n", start_id));
         }
@@ -264,7 +266,12 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn write_logical_exp(&mut self, op: &'a BinOperator, exp: &'a Expression) {
+    fn write_logical_exp(
+        &mut self,
+        op: &'a BinOperator,
+        exp: &'a Expression,
+        vars: &mut HashMap<&'a String, u32>,
+    ) {
         let id_clause2 = self.label_id;
         let id_end = id_clause2 + 1;
         self.label_id += 2;
@@ -277,7 +284,7 @@ impl<'a> Generator<'a> {
                 _{id_clause2}:\n"
             ));
 
-            self.write_expression(exp);
+            self.write_expression(exp, vars);
             self.output.push_str(&format!(
                 "cmpl $0, %eax\n\
                 movl $0, %eax\n\
@@ -292,7 +299,7 @@ impl<'a> Generator<'a> {
                 _{id_clause2}:\n"
             ));
 
-            self.write_expression(exp);
+            self.write_expression(exp, vars);
             self.output.push_str(&format!(
                 "cmpl $0, %eax\n\
                 movl $0, %eax\n\
