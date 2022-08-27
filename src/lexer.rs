@@ -52,7 +52,7 @@ impl<'a> Lexer<'a> {
         // read a single char that we will match against
         let ch = self.read_char();
 
-        // matching identifers and keywords
+        // matching identifiers and keywords
         if ch.is_ascii_alphabetic() {
             let str = self.read_complex(|ch| ch.is_ascii_alphanumeric() || ch == '_');
 
@@ -76,7 +76,7 @@ impl<'a> Lexer<'a> {
                 return Token::Keyword(keyword);
             }
 
-            // or return an identifer
+            // or return an identifier
             return Token::Identifier(str);
         }
 
@@ -100,7 +100,7 @@ impl<'a> Lexer<'a> {
             _ => Token::Illegal,
         };
 
-        // return mult-char token if it exists
+        // return multi-char token if it exists
         if multi_char != Token::Illegal {
             return multi_char;
         }
@@ -131,7 +131,7 @@ impl<'a> Lexer<'a> {
 
     // TODO: merge with `read_complex`
     fn read_multi_char(&mut self, token_str: &str) -> bool {
-        // iterate the str to match
+        // iterate the string we are matching against
         for (i, ch) in token_str.chars().enumerate() {
             // calculate position to read (note the -1 to offset the read on line 54)
             let read_pos = self.position + i - 1;
@@ -143,7 +143,7 @@ impl<'a> Lexer<'a> {
         }
 
         // update the read position
-        // we could do this with `self.read_char` and `self.peek_char` but this is simpler and more efficent
+        // we could do this with `self.read_char` and `self.peek_char` but this is simpler and more efficient
         self.position += token_str.len() - 1;
 
         true
@@ -167,8 +167,8 @@ impl<'a> Lexer<'a> {
     }
 }
 
-// simple iter pattern for Lexer
-// NOTE: no code currently uses this
+// simple iterator pattern for Lexer
+// NOTE: this code is currently unused
 impl Iterator for Lexer<'_> {
     // we are iterating over tokens
     type Item = Token;
