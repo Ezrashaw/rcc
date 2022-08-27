@@ -3,16 +3,20 @@ use crate::ctypes::CType;
 
 pub mod token;
 
+// A Lexer, converts files into C tokens
 pub struct Lexer<'a> {
     input: &'a [u8],
     pub position: usize,
 }
 
 impl<'a> Lexer<'a> {
+    // creates a new `Lexer` from a string reference as byte slice
     pub fn new(input: &'a [u8]) -> Self {
         Self { input, position: 0 }
     }
 
+    // TODO: use the iterator instead
+    // reads all of the input and returns the tokens
     pub fn read_all(&mut self) -> Vec<Token> {
         let mut tokens = vec![];
 
@@ -25,6 +29,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // pops a character from the input
+    // TODO: feels like this should be better (with `peek_char`)
     fn read_char(&mut self) -> char {
         let _char = if self.position >= self.input.len() {
             '\0'
@@ -35,6 +41,7 @@ impl<'a> Lexer<'a> {
         _char
     }
 
+    // peeks a character from the input
     fn peek_char(&self) -> char {
         if self.position >= self.input.len() {
             '\0'
