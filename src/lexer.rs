@@ -30,14 +30,24 @@ impl<'a> Lexer<'a> {
     }
 
     // pops a character from the input
+    // TODO: feels like this should be better (with `peek_char`)
     fn read_char(&mut self) -> char {
+        let _char = if self.position >= self.input.len() {
+            '\0'
+        } else {
+            self.input[self.position].into()
+        };
         self.position += 1;
-        self.input[self.position - 1].into()
+        _char
     }
 
     // peeks a character from the input
     fn peek_char(&self) -> char {
-        self.input[self.position].into()
+        if self.position >= self.input.len() {
+            '\0'
+        } else {
+            self.input[self.position].into()
+        }
     }
 
     pub fn read_token(&mut self) -> Token {
