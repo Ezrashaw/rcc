@@ -86,13 +86,14 @@ impl<'a> Lexer<'a> {
         }
 
         // matching multi-char tokens
-        let multi_char = match self.read_complex(|ch| ch.is_ascii_punctuation()).as_str() {
-            "&&" => Token::And,
-            "||" => Token::Or,
-            "==" => Token::Equal,
-            "!=" => Token::NotEqual,
-            "<=" => Token::LessThanEqual,
-            ">=" => Token::GreaterThanEqual,
+        // TODO: need to look into making this better; we shouldn't use match
+        let multi_char = match () {
+            _ if self.read_multi_char("&&") => Token::And,
+            _ if self.read_multi_char("||") => Token::Or,
+            _ if self.read_multi_char("==") => Token::Equal,
+            _ if self.read_multi_char("!=") => Token::NotEqual,
+            _ if self.read_multi_char("<=") => Token::LessThanEqual,
+            _ if self.read_multi_char(">=") => Token::GreaterThanEqual,
             _ => Token::Illegal,
         };
 
@@ -123,6 +124,26 @@ impl<'a> Lexer<'a> {
             ',' => Token::Comma,
             _ => Token::Illegal,
         }
+    }
+
+    // TODO: merge with `read_complex`
+    fn read_multi_char(&mut self, token_str: &str) -> bool {
+        // iterate the string we are matching against
+        for (i, ch) in token_str.chars().enumerate() {
+            // calculate position to read (note the -1 to offset the read on line 54)
+            let read_pos = self.position + i - 1;
+
+            // check that we have something to read and check it matches
+            if read_pos >= self.input.len() || self.input[read_pos] != ch as u8 {
+                return false;
+            }
+        }
+
+        // update the read position
+        // we could do this with `self.read_char` and `self.peek_char` but this is simpler and more efficient
+        self.position += token_str.len() - 1;
+
+        true
     }
 
     fn read_complex(&mut self, f: fn(char) -> bool) -> String {
