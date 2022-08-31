@@ -4,13 +4,14 @@ use crate::ctypes::CType;
 
 use super::expression::{BinOperator, Expression, UnaryOperator};
 
-pub struct Program(pub Function);
+pub struct Program(pub Vec<Function>);
 
 #[derive(Debug)]
 pub struct Function {
     pub name: String,
+    pub parameters: Vec<String>,
     pub return_type: CType,
-    pub block: Vec<BlockItem>,
+    pub block: Option<Vec<BlockItem>>,
 }
 
 #[derive(Debug)]
