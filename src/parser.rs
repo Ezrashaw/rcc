@@ -92,7 +92,11 @@ impl<'a> Parser<'a> {
         let name = self.read_ident();
         let parameters = self.read_args();
 
-        let block = if self.peek_token() == &Token::Semicolon { None } else { Some(self.read_block())};
+        let block = if self.peek_token() == &Token::Semicolon {
+            None
+        } else {
+            Some(self.read_block())
+        };
 
         Function {
             name,
