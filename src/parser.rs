@@ -374,6 +374,20 @@ impl<'a> Parser<'a> {
     fn read_factor(&mut self) -> Expression {
         let token = self.read_token();
 
+        if let Token::Identifier(name) = token {
+            if self.peek_token() == &Token::OpenParen {
+                self.read_token();
+                let args = Vec::new();
+                while self.peek_token() != &Token::CloseParen {
+                    args.push(self.read_expression());
+                    if self.read_token() != &Token::Comma {
+                        panic!("Expected comma!");
+                    }
+                }
+                return Expression::FunCall(name.clone(), args);
+            }
+        }
+
         match token {
             Token::OpenParen => {
                 let exp = self.read_expression();
