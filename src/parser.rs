@@ -23,13 +23,13 @@ impl<'a> Parser<'a> {
     }
 
     pub fn read_program(&mut self) -> Program {
-        let function = self.read_function();
+        let functions = Vec::new();
 
-        if self.position < self.input.len() {
-            panic!("unexpected tokens!");
+        while self.position < self.input.len() {
+            functions.push(self.read_function());
         }
 
-        Program(function)
+        Program(functions)
     }
 
     fn read_token(&mut self) -> &Token {
@@ -66,25 +66,38 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn read_args(&mut self) {
+    fn read_args(&mut self) -> Vec<String> {
         if self.read_token() != &Token::OpenParen {
             panic!("No opening argument paren!")
         }
-        if self.read_token() != &Token::CloseParen {
-            panic!("No closing argument paren!")
+        let args = Vec::new();
+
+        self.read_type();
+        args.push(self.read_ident());
+
+        while self.peek_token() != &Token::CloseParen {
+            if self.read_token() != &Token::Comma {
+                panic!("expected comma!")
+            }
+            self.read_type();
+            args.push(self.read_ident());
         }
+
+        self.read_token();
+        args
     }
 
     fn read_function(&mut self) -> Function {
         let return_type = self.read_type();
         let name = self.read_ident();
-        self.read_args();
+        let parameters = self.read_args();
 
-        let block = self.read_block();
+        let block = if self.peek_token() == &Token::Semicolon { None } else { Some(self.read_block())};
 
         Function {
             name,
             return_type,
+            parameters,
             block,
         }
     }
