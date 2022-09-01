@@ -386,6 +386,7 @@ impl<'a> Parser<'a> {
                         panic!("Expected comma!");
                     }
                 }
+                self.read_token();
                 return Expression::FunCall(name.clone(), args);
             }
         }
