@@ -15,7 +15,7 @@
 use std::collections::HashMap;
 
 use crate::parser::{
-    ast::{BlockItem, Program, Statement},
+    ast::{BlockItem, Function, Program, Statement},
     expression::{BinOperator, Expression, UnaryOperator},
 };
 
@@ -37,13 +37,9 @@ impl<'a> Generator<'a> {
     }
 
     pub fn gen_asm(mut self) -> String {
-        self.write_fn_pre(&self.input.0.name);
-
-        self.write_block(&self.input.0.block, &mut HashMap::new());
-
-        self.output.push_str("movl $0, %eax\n");
-        self.write_fn_pro();
-
+        for function in &self.input.0 {
+            self.write_fn_def(function);
+        }
         self.output
     }
 
@@ -62,6 +58,17 @@ impl<'a> Generator<'a> {
             pop %ebp\n\
             ret\n",
         )
+    }
+
+    fn write_fn_def(&mut self, function: &'a Function) {
+        if let Some(block) = &function.block {
+            self.write_fn_pre(&function.name);
+
+            self.write_block(&block, &mut HashMap::new());
+
+            self.output.push_str("movl $0, %eax\n");
+            self.write_fn_pro();
+        }
     }
 
     fn write_block(&mut self, block: &'a Vec<BlockItem>, vars: &mut HashMap<&'a String, usize>) {
@@ -165,6 +172,7 @@ impl<'a> Generator<'a> {
             Expression::Conditional(exp, e1, e2) => {
                 self.write_ternary_conditional(exp, e1, e2, vars)
             }
+            Expression::FunCall(..) => todo!(),
         }
     }
 
