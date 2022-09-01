@@ -64,8 +64,15 @@ impl<'a> Generator<'a> {
         if let Some(block) = &function.block {
             self.write_fn_pre(&function.name);
 
-            let mut vars = HashMap::new();
+            let mut vars = HashMap::new(); // TODO: global scoped variables
             let mut current_scope = HashSet::new();
+
+            let mut param_offset = 8; // first parameter is at EBP + 8
+            for argument in &function.parameters {
+                vars.insert(argument, param_offset);
+                current_scope.insert(argument);
+                param_offset += 4;
+            }
 
             self.write_block(&block, &mut vars, current_scope);
 
