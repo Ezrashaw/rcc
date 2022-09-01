@@ -23,7 +23,7 @@ pub struct Generator<'a> {
     input: &'a Program,
     output: String,
     label_id: u32,
-    stack_index: usize,
+    stack_index: isize,
 }
 
 impl<'a> Generator<'a> {
@@ -32,7 +32,7 @@ impl<'a> Generator<'a> {
             input,
             output: String::new(),
             label_id: 0,
-            stack_index: 4,
+            stack_index: -4,
         }
     }
 
@@ -84,23 +84,23 @@ impl<'a> Generator<'a> {
     fn write_block(
         &mut self,
         block: &'a Vec<BlockItem>,
-        vars: &mut HashMap<&'a String, usize>,
+        vars: &mut HashMap<&'a String, isize>,
         mut current_scope: HashSet<&'a String>,
     ) {
         for item in block {
             self.write_block_item(item, vars, &mut current_scope);
         }
 
-        let bytes_to_dealloc = 4 * current_scope.len();
+        let bytes_to_dealloc = 4 * current_scope.len() as isize;
         self.output
             .push_str(&format!("addl ${}, %esp\n", bytes_to_dealloc));
-        self.stack_index -= bytes_to_dealloc;
+        self.stack_index += bytes_to_dealloc;
     }
 
     fn write_block_item(
         &mut self,
         item: &'a BlockItem,
-        vars: &mut HashMap<&'a String, usize>,
+        vars: &mut HashMap<&'a String, isize>,
         current_scope: &mut HashSet<&'a String>,
     ) {
         if let BlockItem::Statement(statement) = item {
@@ -117,11 +117,11 @@ impl<'a> Generator<'a> {
             self.output.push_str("pushl %eax\n");
             vars.insert(name, self.stack_index);
             current_scope.insert(name);
-            self.stack_index += 4;
+            self.stack_index -= 4;
         }
     }
 
-    fn write_statement(&mut self, statement: &'a Statement, vars: &mut HashMap<&'a String, usize>) {
+    fn write_statement(&mut self, statement: &'a Statement, vars: &mut HashMap<&'a String, isize>) {
         if let Statement::Return(exp) = statement {
             self.write_expression(exp, vars);
 
@@ -140,7 +140,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn write_expression(&mut self, exp: &'a Expression, vars: &mut HashMap<&'a String, usize>) {
+    fn write_expression(&mut self, exp: &'a Expression, vars: &mut HashMap<&'a String, isize>) {
         match exp {
             Expression::Constant(int) => self.output.push_str(&format!("movl ${}, %eax\n", int)),
             Expression::UnaryOp(op, exp) => {
@@ -172,7 +172,7 @@ impl<'a> Generator<'a> {
                 }
                 let offset = vars.get(name).unwrap();
                 self.output
-                    .push_str(&format!("movl %eax, -{}(%ebp)\n", offset));
+                    .push_str(&format!("movl %eax, {}(%ebp)\n", offset));
             }
             Expression::Variable(name) => {
                 if !vars.contains_key(name) {
@@ -180,7 +180,7 @@ impl<'a> Generator<'a> {
                 }
                 let offset = vars.get(name).unwrap();
                 self.output
-                    .push_str(&format!("movl -{}(%ebp), %eax\n", offset));
+                    .push_str(&format!("movl {}(%ebp), %eax\n", offset));
             }
             Expression::Conditional(exp, e1, e2) => {
                 self.write_ternary_conditional(exp, e1, e2, vars)
@@ -204,7 +204,7 @@ impl<'a> Generator<'a> {
         cntrl: &'a Expression,
         e1: &'a Expression,
         e2: &'a Expression,
-        vars: &mut HashMap<&'a String, usize>,
+        vars: &mut HashMap<&'a String, isize>,
     ) {
         let start_id = self.label_id;
         self.label_id += 2;
@@ -229,7 +229,7 @@ impl<'a> Generator<'a> {
         cntrl: &'a Expression,
         state_true: &'a Statement,
         state_false: Option<&'a Statement>,
-        vars: &mut HashMap<&'a String, usize>,
+        vars: &mut HashMap<&'a String, isize>,
     ) {
         let start_id = self.label_id;
         self.label_id += if state_false.is_some() { 2 } else { 1 };
@@ -314,7 +314,7 @@ impl<'a> Generator<'a> {
         &mut self,
         op: &'a BinOperator,
         exp: &'a Expression,
-        vars: &mut HashMap<&'a String, usize>,
+        vars: &mut HashMap<&'a String, isize>,
     ) {
         let id_clause2 = self.label_id;
         let id_end = id_clause2 + 1;

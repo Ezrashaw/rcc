@@ -380,11 +380,14 @@ impl<'a> Parser<'a> {
             if self.peek_token() == &Token::OpenParen {
                 self.read_token();
                 let mut args = Vec::new();
-                while self.peek_token() != &Token::CloseParen {
+                if self.peek_token() != &Token::CloseParen {
                     args.push(self.read_expression());
+                }
+                while self.peek_token() != &Token::CloseParen {
                     if self.read_token() != &Token::Comma {
                         panic!("Expected comma!");
                     }
+                    args.push(self.read_expression());
                 }
                 self.read_token();
                 return Expression::FunCall(name.clone(), args);
