@@ -30,10 +30,11 @@ pub enum BlockItem {
 
 impl fmt::Debug for Program {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let fun = &self.0;
-        write!(f, "fn {}() -> {:?}\n\t", fun.name, fun.return_type)?;
-        for block_item in &fun.block {
-            Self::write_block_item(f, block_item)?;
+        for fun in self.0 {
+            write!(f, "fn {}() -> {:?}\n\t", fun.name, fun.return_type)?;
+            for block_item in &fun.block.unwrap() {
+                Self::write_block_item(f, block_item)?;
+            }
         }
 
         Ok(())
@@ -110,6 +111,9 @@ impl Program {
                 Self::write_exp(f, e1)?;
                 write!(f, " ELSE ")?;
                 Self::write_exp(f, e2)?;
+            }
+            Expression::FunCall(name, args) => {
+                todo!()
             }
         }
 
