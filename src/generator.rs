@@ -185,7 +185,17 @@ impl<'a> Generator<'a> {
             Expression::Conditional(exp, e1, e2) => {
                 self.write_ternary_conditional(exp, e1, e2, vars)
             }
-            Expression::FunCall(..) => todo!(),
+            Expression::FunCall(name, args) => {
+                for arg in args {
+                    self.write_expression(arg, vars);
+                    self.output.push_str("pushl %eax\n");
+                }
+                self.output.push_str(&format!("call {}\n", name));
+
+                let bytes_to_remove = 4 * args.len();
+                self.output
+                    .push_str(&format!("addl ${}, %esp\n", bytes_to_remove));
+            }
         }
     }
 
