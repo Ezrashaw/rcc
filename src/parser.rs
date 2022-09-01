@@ -72,8 +72,10 @@ impl<'a> Parser<'a> {
         }
         let args = Vec::new();
 
-        self.read_type();
-        args.push(self.read_ident());
+        if self.peek_token() != &Token::CloseParen {
+            self.read_type();
+            args.push(self.read_ident());
+        }
 
         while self.peek_token() != &Token::CloseParen {
             if self.read_token() != &Token::Comma {
