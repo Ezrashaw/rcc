@@ -23,7 +23,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn read_program(&mut self) -> Program {
-        let functions = Vec::new();
+        let mut functions = Vec::new();
 
         while self.position < self.input.len() {
             functions.push(self.read_function());
@@ -70,7 +70,7 @@ impl<'a> Parser<'a> {
         if self.read_token() != &Token::OpenParen {
             panic!("No opening argument paren!")
         }
-        let args = Vec::new();
+        let mut args = Vec::new();
 
         if self.peek_token() != &Token::CloseParen {
             self.read_type();
@@ -374,12 +374,12 @@ impl<'a> Parser<'a> {
     }
 
     fn read_factor(&mut self) -> Expression {
-        let token = self.read_token();
+        let token = self.read_token().clone();
 
-        if let Token::Identifier(name) = token {
+        if let Token::Identifier(ref name) = token {
             if self.peek_token() == &Token::OpenParen {
                 self.read_token();
-                let args = Vec::new();
+                let mut args = Vec::new();
                 while self.peek_token() != &Token::CloseParen {
                     args.push(self.read_expression());
                     if self.read_token() != &Token::Comma {
@@ -398,18 +398,18 @@ impl<'a> Parser<'a> {
                 }
                 return exp;
             }
-            Token::Literal(Literal::Integer(int)) => return Expression::Constant(*int),
+            Token::Literal(Literal::Integer(int)) => return Expression::Constant(int),
             Token::Identifier(name) => return Expression::Variable(name.clone()),
-            Token::BitwiseComplement | &Token::LogicalNegation | &Token::Minus => (),
+            Token::BitwiseComplement | Token::LogicalNegation | Token::Minus => (),
             _ => panic!("Error in read_factor, unknown token {:?}", token),
         }
 
         //unary operator parsing
 
         let operator = match token {
-            &Token::Minus => UnaryOperator::Negation,
-            &Token::BitwiseComplement => UnaryOperator::BitwiseComplement,
-            &Token::LogicalNegation => UnaryOperator::LogicalNegation,
+            Token::Minus => UnaryOperator::Negation,
+            Token::BitwiseComplement => UnaryOperator::BitwiseComplement,
+            Token::LogicalNegation => UnaryOperator::LogicalNegation,
             _ => panic!("Not a unary operator!"),
         };
 

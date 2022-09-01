@@ -30,9 +30,9 @@ pub enum BlockItem {
 
 impl fmt::Debug for Program {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for fun in self.0 {
+        for fun in &self.0 {
             write!(f, "fn {}() -> {:?}\n\t", fun.name, fun.return_type)?;
-            for block_item in &fun.block.unwrap() {
+            for block_item in fun.block.as_ref().unwrap() {
                 Self::write_block_item(f, block_item)?;
             }
         }
