@@ -12,7 +12,7 @@
 
 // TODO: fix the lifetimes!
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::parser::{
     ast::{BlockItem, Function, Program, Statement},
@@ -64,16 +64,22 @@ impl<'a> Generator<'a> {
         if let Some(block) = &function.block {
             self.write_fn_pre(&function.name);
 
-            self.write_block(&block, &mut HashMap::new());
+            let mut vars = HashMap::new();
+            let mut current_scope = HashSet::new();
+
+            self.write_block(&block, &mut vars, current_scope);
 
             self.output.push_str("movl $0, %eax\n");
             self.write_fn_pro();
         }
     }
 
-    fn write_block(&mut self, block: &'a Vec<BlockItem>, vars: &mut HashMap<&'a String, usize>) {
-        let mut current_scope = HashMap::new();
-
+    fn write_block(
+        &mut self,
+        block: &'a Vec<BlockItem>,
+        vars: &mut HashMap<&'a String, usize>,
+        mut current_scope: HashSet<&'a String>,
+    ) {
         for item in block {
             self.write_block_item(item, vars, &mut current_scope);
         }
@@ -88,12 +94,12 @@ impl<'a> Generator<'a> {
         &mut self,
         item: &'a BlockItem,
         vars: &mut HashMap<&'a String, usize>,
-        current_scope: &mut HashMap<&'a String, usize>,
+        current_scope: &mut HashSet<&'a String>,
     ) {
         if let BlockItem::Statement(statement) = item {
             self.write_statement(statement, vars);
         } else if let BlockItem::Declaration(name, exp) = item {
-            if current_scope.contains_key(&name) {
+            if current_scope.contains(&name) {
                 panic!("Tried to declare variable twice!");
             }
             if exp.is_some() {
@@ -103,7 +109,7 @@ impl<'a> Generator<'a> {
             }
             self.output.push_str("pushl %eax\n");
             vars.insert(name, self.stack_index);
-            current_scope.insert(name, self.stack_index);
+            current_scope.insert(name);
             self.stack_index += 4;
         }
     }
@@ -123,7 +129,7 @@ impl<'a> Generator<'a> {
                 self.write_conditional(cntrl, state_true, None, vars);
             }
         } else if let Statement::Compound(block) = statement {
-            self.write_block(block, &mut vars.clone());
+            self.write_block(block, &mut vars.clone(), HashSet::new());
         }
     }
 
