@@ -4,6 +4,8 @@
 
 // TODO: create an IR
 
+// TODO: function validition, we need new step with variable and function validation
+
 use std::{env, fs, path::Path, process::Command};
 
 use generator::Generator;
