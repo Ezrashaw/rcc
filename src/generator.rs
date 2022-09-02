@@ -119,6 +119,23 @@ impl<'a> Generator<'a> {
             }
         } else if let Statement::Compound(block) = statement {
             self.write_block(block, &mut vars.clone());
+        } else if let Statement::While(exp, statement) = statement {
+            let start = self.label_id;
+            let end = self.label_id + 1;
+            self.label_id += 2;
+            self.output.push_str(&format!("_{}:\n", start));
+            self.write_expression(exp, vars);
+            self.output.push_str(&format!(
+                "cmpl $0, %eax\n\
+                je _{}\n",
+                end,
+            ));
+            self.write_statement(statement, vars);
+            self.output.push_str(&format!(
+                "jmp _{}\n\
+                _{}:\n",
+                start, end
+            ));
         }
     }
 

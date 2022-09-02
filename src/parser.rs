@@ -173,6 +173,21 @@ impl<'a> Parser<'a> {
                 Statement::Break
             } else if keyword == &Keyword::Continue {
                 Statement::Continue
+            } else if keyword == &Keyword::While {
+                self.read_token();
+                if self.read_token() != &Token::OpenParen {
+                    panic!("expected opening paren!")
+                }
+
+                let exp = self.read_expression();
+
+                if self.read_token() != &Token::CloseParen {
+                    panic!("expected closing paren!")
+                }
+
+                let loop_statement = self.read_statement();
+
+                return Statement::While(exp, Box::new(loop_statement));
             } else {
                 panic!("Unknown keyword in statement!")
             }
