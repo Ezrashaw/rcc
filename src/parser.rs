@@ -95,6 +95,7 @@ impl<'a> Parser<'a> {
         let parameters = self.read_args();
 
         let block = if self.peek_token() == &Token::Semicolon {
+            self.read_token();
             None
         } else {
             Some(self.read_block())

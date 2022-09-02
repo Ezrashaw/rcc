@@ -68,11 +68,13 @@ impl<'a> Generator<'a> {
             let mut current_scope = HashSet::new();
 
             let mut param_offset = 8; // first parameter is at EBP + 8
-            for argument in &function.parameters {
+            for argument in function.parameters.iter().rev() {
                 vars.insert(argument, param_offset);
                 current_scope.insert(argument);
                 param_offset += 4;
             }
+
+            self.stack_index = -4;
 
             self.write_block(&block, &mut vars, current_scope);
 
@@ -104,7 +106,7 @@ impl<'a> Generator<'a> {
         current_scope: &mut HashSet<&'a String>,
     ) {
         if let BlockItem::Statement(statement) = item {
-            self.write_statement(statement, vars);
+            self.write_statement(statement, vars, current_scope);
         } else if let BlockItem::Declaration(name, exp) = item {
             if current_scope.contains(&name) {
                 panic!("Tried to declare variable twice!");
@@ -121,9 +123,18 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn write_statement(&mut self, statement: &'a Statement, vars: &mut HashMap<&'a String, isize>) {
+    fn write_statement(
+        &mut self,
+        statement: &'a Statement,
+        vars: &mut HashMap<&'a String, isize>,
+        current_scope: &mut HashSet<&'a String>,
+    ) {
         if let Statement::Return(exp) = statement {
             self.write_expression(exp, vars);
+
+            let bytes_to_dealloc = 4 * current_scope.len() as isize;
+            self.output
+                .push_str(&format!("addl ${}, %esp\n", bytes_to_dealloc));
 
             self.write_fn_pro();
         } else if let Statement::Expression(exp) = statement {
@@ -131,9 +142,9 @@ impl<'a> Generator<'a> {
         } else if let Statement::Conditional(cntrl, state_true, state_false) = statement {
             if let Some(state_false) = state_false {
                 let state_false = Some(state_false.as_ref()); // wtf is this, we rewrap the Option????
-                self.write_conditional(cntrl, state_true, state_false, vars);
+                self.write_conditional(cntrl, state_true, state_false, vars, current_scope);
             } else {
-                self.write_conditional(cntrl, state_true, None, vars);
+                self.write_conditional(cntrl, state_true, None, vars, current_scope);
             }
         } else if let Statement::Compound(block) = statement {
             self.write_block(block, &mut vars.clone(), HashSet::new());
@@ -230,6 +241,7 @@ impl<'a> Generator<'a> {
         state_true: &'a Statement,
         state_false: Option<&'a Statement>,
         vars: &mut HashMap<&'a String, isize>,
+        current_scope: &mut HashSet<&'a String>,
     ) {
         let start_id = self.label_id;
         self.label_id += if state_false.is_some() { 2 } else { 1 };
@@ -241,13 +253,13 @@ impl<'a> Generator<'a> {
                 je _{start_id}\n"
             ));
 
-            self.write_statement(state_true, vars);
+            self.write_statement(state_true, vars, current_scope);
             self.output.push_str(&format!(
                 "jmp _{}\n\
                 _{start_id}:\n",
                 start_id + 1
             ));
-            self.write_statement(state_false.unwrap(), vars);
+            self.write_statement(state_false.unwrap(), vars, current_scope);
 
             self.output.push_str(&format!("_{}:\n", start_id + 1));
         } else {
@@ -256,7 +268,7 @@ impl<'a> Generator<'a> {
                 je _{start_id}\n"
             ));
 
-            self.write_statement(state_true, vars);
+            self.write_statement(state_true, vars, current_scope);
 
             self.output.push_str(&format!("_{}:\n", start_id));
         }
