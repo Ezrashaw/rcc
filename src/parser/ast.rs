@@ -112,7 +112,7 @@ impl Program {
                 write!(f, " ELSE ")?;
                 Self::write_exp(f, e2)?;
             }
-            Expression::FunCall(name, args) => (),
+            Expression::FunCall(_name, _args) => (),
         }
 
         Ok(())

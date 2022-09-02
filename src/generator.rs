@@ -76,7 +76,7 @@ impl<'a> Generator<'a> {
 
             self.stack_index = -4;
 
-            self.write_block(&block, &mut vars, current_scope);
+            self.write_block(block, &mut vars, current_scope);
 
             self.output.push_str("movl $0, %eax\n");
             self.write_fn_pro();

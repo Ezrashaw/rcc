@@ -404,7 +404,7 @@ impl<'a> Parser<'a> {
                 return exp;
             }
             Token::Literal(Literal::Integer(int)) => return Expression::Constant(int),
-            Token::Identifier(name) => return Expression::Variable(name.clone()),
+            Token::Identifier(name) => return Expression::Variable(name),
             Token::BitwiseComplement | Token::LogicalNegation | Token::Minus => (),
             _ => panic!("Error in read_factor, unknown token {:?}", token),
         }
