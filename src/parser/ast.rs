@@ -4,13 +4,14 @@ use crate::ctypes::CType;
 
 use super::expression::{BinOperator, Expression, UnaryOperator};
 
-pub struct Program(pub Function);
+pub struct Program(pub Vec<Function>);
 
 #[derive(Debug)]
 pub struct Function {
     pub name: String,
+    pub parameters: Vec<String>,
     pub return_type: CType,
-    pub block: Vec<BlockItem>,
+    pub block: Option<Vec<BlockItem>>,
 }
 
 #[derive(Debug)]
@@ -29,10 +30,11 @@ pub enum BlockItem {
 
 impl fmt::Debug for Program {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let fun = &self.0;
-        write!(f, "fn {}() -> {:?}\n\t", fun.name, fun.return_type)?;
-        for block_item in &fun.block {
-            Self::write_block_item(f, block_item)?;
+        for fun in &self.0 {
+            write!(f, "fn {}() -> {:?}\n\t", fun.name, fun.return_type)?;
+            for block_item in fun.block.as_ref().unwrap() {
+                Self::write_block_item(f, block_item)?;
+            }
         }
 
         Ok(())
@@ -110,6 +112,7 @@ impl Program {
                 write!(f, " ELSE ")?;
                 Self::write_exp(f, e2)?;
             }
+            Expression::FunCall(name, args) => (),
         }
 
         Ok(())

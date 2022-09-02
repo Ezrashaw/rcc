@@ -23,13 +23,13 @@ impl<'a> Parser<'a> {
     }
 
     pub fn read_program(&mut self) -> Program {
-        let function = self.read_function();
+        let mut functions = Vec::new();
 
-        if self.position < self.input.len() {
-            panic!("unexpected tokens!");
+        while self.position < self.input.len() {
+            functions.push(self.read_function());
         }
 
-        Program(function)
+        Program(functions)
     }
 
     fn read_token(&mut self) -> &Token {
@@ -66,25 +66,45 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn read_args(&mut self) {
+    fn read_args(&mut self) -> Vec<String> {
         if self.read_token() != &Token::OpenParen {
             panic!("No opening argument paren!")
         }
-        if self.read_token() != &Token::CloseParen {
-            panic!("No closing argument paren!")
+        let mut args = Vec::new();
+
+        if self.peek_token() != &Token::CloseParen {
+            self.read_type();
+            args.push(self.read_ident());
         }
+
+        while self.peek_token() != &Token::CloseParen {
+            if self.read_token() != &Token::Comma {
+                panic!("expected comma!")
+            }
+            self.read_type();
+            args.push(self.read_ident());
+        }
+
+        self.read_token();
+        args
     }
 
     fn read_function(&mut self) -> Function {
         let return_type = self.read_type();
         let name = self.read_ident();
-        self.read_args();
+        let parameters = self.read_args();
 
-        let block = self.read_block();
+        let block = if self.peek_token() == &Token::Semicolon {
+            self.read_token();
+            None
+        } else {
+            Some(self.read_block())
+        };
 
         Function {
             name,
             return_type,
+            parameters,
             block,
         }
     }
@@ -355,7 +375,25 @@ impl<'a> Parser<'a> {
     }
 
     fn read_factor(&mut self) -> Expression {
-        let token = self.read_token();
+        let token = self.read_token().clone();
+
+        if let Token::Identifier(ref name) = token {
+            if self.peek_token() == &Token::OpenParen {
+                self.read_token();
+                let mut args = Vec::new();
+                if self.peek_token() != &Token::CloseParen {
+                    args.push(self.read_expression());
+                }
+                while self.peek_token() != &Token::CloseParen {
+                    if self.read_token() != &Token::Comma {
+                        panic!("Expected comma!");
+                    }
+                    args.push(self.read_expression());
+                }
+                self.read_token();
+                return Expression::FunCall(name.clone(), args);
+            }
+        }
 
         match token {
             Token::OpenParen => {
@@ -365,18 +403,18 @@ impl<'a> Parser<'a> {
                 }
                 return exp;
             }
-            Token::Literal(Literal::Integer(int)) => return Expression::Constant(*int),
+            Token::Literal(Literal::Integer(int)) => return Expression::Constant(int),
             Token::Identifier(name) => return Expression::Variable(name.clone()),
-            Token::BitwiseComplement | &Token::LogicalNegation | &Token::Minus => (),
+            Token::BitwiseComplement | Token::LogicalNegation | Token::Minus => (),
             _ => panic!("Error in read_factor, unknown token {:?}", token),
         }
 
         //unary operator parsing
 
         let operator = match token {
-            &Token::Minus => UnaryOperator::Negation,
-            &Token::BitwiseComplement => UnaryOperator::BitwiseComplement,
-            &Token::LogicalNegation => UnaryOperator::LogicalNegation,
+            Token::Minus => UnaryOperator::Negation,
+            Token::BitwiseComplement => UnaryOperator::BitwiseComplement,
+            Token::LogicalNegation => UnaryOperator::LogicalNegation,
             _ => panic!("Not a unary operator!"),
         };
 

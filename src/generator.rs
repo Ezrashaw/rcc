@@ -12,10 +12,10 @@
 
 // TODO: fix the lifetimes!
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::parser::{
-    ast::{BlockItem, Program, Statement},
+    ast::{BlockItem, Function, Program, Statement},
     expression::{BinOperator, Expression, UnaryOperator},
 };
 
@@ -23,7 +23,7 @@ pub struct Generator<'a> {
     input: &'a Program,
     output: String,
     label_id: u32,
-    stack_index: usize,
+    stack_index: isize,
 }
 
 impl<'a> Generator<'a> {
@@ -32,18 +32,14 @@ impl<'a> Generator<'a> {
             input,
             output: String::new(),
             label_id: 0,
-            stack_index: 4,
+            stack_index: -4,
         }
     }
 
     pub fn gen_asm(mut self) -> String {
-        self.write_fn_pre(&self.input.0.name);
-
-        self.write_block(&self.input.0.block, &mut HashMap::new());
-
-        self.output.push_str("movl $0, %eax\n");
-        self.write_fn_pro();
-
+        for function in &self.input.0 {
+            self.write_fn_def(function);
+        }
         self.output
     }
 
@@ -64,29 +60,55 @@ impl<'a> Generator<'a> {
         )
     }
 
-    fn write_block(&mut self, block: &'a Vec<BlockItem>, vars: &mut HashMap<&'a String, usize>) {
-        let mut current_scope = HashMap::new();
+    fn write_fn_def(&mut self, function: &'a Function) {
+        if let Some(block) = &function.block {
+            self.write_fn_pre(&function.name);
 
+            let mut vars = HashMap::new(); // TODO: global scoped variables
+            let mut current_scope = HashSet::new();
+
+            let mut param_offset = 8; // first parameter is at EBP + 8
+            for argument in function.parameters.iter().rev() {
+                vars.insert(argument, param_offset);
+                current_scope.insert(argument);
+                param_offset += 4;
+            }
+
+            self.stack_index = -4;
+
+            self.write_block(&block, &mut vars, current_scope);
+
+            self.output.push_str("movl $0, %eax\n");
+            self.write_fn_pro();
+        }
+    }
+
+    fn write_block(
+        &mut self,
+        block: &'a Vec<BlockItem>,
+        vars: &mut HashMap<&'a String, isize>,
+        mut current_scope: HashSet<&'a String>,
+    ) {
         for item in block {
             self.write_block_item(item, vars, &mut current_scope);
         }
 
-        let bytes_to_dealloc = 4 * current_scope.len();
+        let bytes_to_dealloc = 4 * current_scope.len() as isize;
         self.output
             .push_str(&format!("addl ${}, %esp\n", bytes_to_dealloc));
-        self.stack_index -= bytes_to_dealloc;
+        self.stack_index += bytes_to_dealloc;
     }
 
     fn write_block_item(
         &mut self,
         item: &'a BlockItem,
-        vars: &mut HashMap<&'a String, usize>,
-        current_scope: &mut HashMap<&'a String, usize>,
+        vars: &mut HashMap<&'a String, isize>,
+        current_scope: &mut HashSet<&'a String>,
     ) {
         if let BlockItem::Statement(statement) = item {
-            self.write_statement(statement, vars);
+            self.write_statement(statement, vars, current_scope);
         } else if let BlockItem::Declaration(name, exp) = item {
-            if current_scope.contains_key(&name) {
+            if current_scope.contains(&name) {
                 panic!("Tried to declare variable twice!");
             }
             if exp.is_some() {
@@ -96,14 +118,23 @@ impl<'a> Generator<'a> {
             }
             self.output.push_str("pushl %eax\n");
             vars.insert(name, self.stack_index);
-            current_scope.insert(name, self.stack_index);
-            self.stack_index += 4;
+            current_scope.insert(name);
+            self.stack_index -= 4;
         }
     }
 
-    fn write_statement(&mut self, statement: &'a Statement, vars: &mut HashMap<&'a String, usize>) {
+    fn write_statement(
+        &mut self,
+        statement: &'a Statement,
+        vars: &mut HashMap<&'a String, isize>,
+        current_scope: &mut HashSet<&'a String>,
+    ) {
         if let Statement::Return(exp) = statement {
             self.write_expression(exp, vars);
+
+            let bytes_to_dealloc = 4 * current_scope.len() as isize;
+            self.output
+                .push_str(&format!("addl ${}, %esp\n", bytes_to_dealloc));
 
             self.write_fn_pro();
         } else if let Statement::Expression(exp) = statement {
@@ -111,16 +142,16 @@ impl<'a> Generator<'a> {
         } else if let Statement::Conditional(cntrl, state_true, state_false) = statement {
             if let Some(state_false) = state_false {
                 let state_false = Some(state_false.as_ref()); // wtf is this, we rewrap the Option????
-                self.write_conditional(cntrl, state_true, state_false, vars);
+                self.write_conditional(cntrl, state_true, state_false, vars, current_scope);
             } else {
-                self.write_conditional(cntrl, state_true, None, vars);
+                self.write_conditional(cntrl, state_true, None, vars, current_scope);
             }
         } else if let Statement::Compound(block) = statement {
-            self.write_block(block, &mut vars.clone());
+            self.write_block(block, &mut vars.clone(), HashSet::new());
         }
     }
 
-    fn write_expression(&mut self, exp: &'a Expression, vars: &mut HashMap<&'a String, usize>) {
+    fn write_expression(&mut self, exp: &'a Expression, vars: &mut HashMap<&'a String, isize>) {
         match exp {
             Expression::Constant(int) => self.output.push_str(&format!("movl ${}, %eax\n", int)),
             Expression::UnaryOp(op, exp) => {
@@ -152,7 +183,7 @@ impl<'a> Generator<'a> {
                 }
                 let offset = vars.get(name).unwrap();
                 self.output
-                    .push_str(&format!("movl %eax, -{}(%ebp)\n", offset));
+                    .push_str(&format!("movl %eax, {}(%ebp)\n", offset));
             }
             Expression::Variable(name) => {
                 if !vars.contains_key(name) {
@@ -160,10 +191,21 @@ impl<'a> Generator<'a> {
                 }
                 let offset = vars.get(name).unwrap();
                 self.output
-                    .push_str(&format!("movl -{}(%ebp), %eax\n", offset));
+                    .push_str(&format!("movl {}(%ebp), %eax\n", offset));
             }
             Expression::Conditional(exp, e1, e2) => {
                 self.write_ternary_conditional(exp, e1, e2, vars)
+            }
+            Expression::FunCall(name, args) => {
+                for arg in args {
+                    self.write_expression(arg, vars);
+                    self.output.push_str("pushl %eax\n");
+                }
+                self.output.push_str(&format!("call {}\n", name));
+
+                let bytes_to_remove = 4 * args.len();
+                self.output
+                    .push_str(&format!("addl ${}, %esp\n", bytes_to_remove));
             }
         }
     }
@@ -173,7 +215,7 @@ impl<'a> Generator<'a> {
         cntrl: &'a Expression,
         e1: &'a Expression,
         e2: &'a Expression,
-        vars: &mut HashMap<&'a String, usize>,
+        vars: &mut HashMap<&'a String, isize>,
     ) {
         let start_id = self.label_id;
         self.label_id += 2;
@@ -198,7 +240,8 @@ impl<'a> Generator<'a> {
         cntrl: &'a Expression,
         state_true: &'a Statement,
         state_false: Option<&'a Statement>,
-        vars: &mut HashMap<&'a String, usize>,
+        vars: &mut HashMap<&'a String, isize>,
+        current_scope: &mut HashSet<&'a String>,
     ) {
         let start_id = self.label_id;
         self.label_id += if state_false.is_some() { 2 } else { 1 };
@@ -210,13 +253,13 @@ impl<'a> Generator<'a> {
                 je _{start_id}\n"
             ));
 
-            self.write_statement(state_true, vars);
+            self.write_statement(state_true, vars, current_scope);
             self.output.push_str(&format!(
                 "jmp _{}\n\
                 _{start_id}:\n",
                 start_id + 1
             ));
-            self.write_statement(state_false.unwrap(), vars);
+            self.write_statement(state_false.unwrap(), vars, current_scope);
 
             self.output.push_str(&format!("_{}:\n", start_id + 1));
         } else {
@@ -225,7 +268,7 @@ impl<'a> Generator<'a> {
                 je _{start_id}\n"
             ));
 
-            self.write_statement(state_true, vars);
+            self.write_statement(state_true, vars, current_scope);
 
             self.output.push_str(&format!("_{}:\n", start_id));
         }
@@ -283,7 +326,7 @@ impl<'a> Generator<'a> {
         &mut self,
         op: &'a BinOperator,
         exp: &'a Expression,
-        vars: &mut HashMap<&'a String, usize>,
+        vars: &mut HashMap<&'a String, isize>,
     ) {
         let id_clause2 = self.label_id;
         let id_end = id_clause2 + 1;

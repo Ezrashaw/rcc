@@ -8,6 +8,7 @@ pub enum Expression {
     Assign(String, Box<Expression>),
     Variable(String),
     Conditional(Box<Expression>, Box<Expression>, Box<Expression>),
+    FunCall(String, Vec<Expression>),
 }
 
 #[derive(Debug, PartialEq, Eq)]
