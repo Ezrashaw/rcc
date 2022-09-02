@@ -1,6 +1,6 @@
 # 🚀 RCC (Rust C Compiler) 🚀
 
-## A simple C compiler written in pure Rust
+## A simple C compiler written in pure safe Rust
 
 ---
 
@@ -14,7 +14,12 @@
 - [x] Conditionals (`if` statements and ternary `?`)
 - [x] Blocks (fancy: Compound statements)
 - [ ] Functions
+- [ ] Loops (2x `for`, `while`)
 - [ ] Global variables
 - [ ] More types
+- [ ] Pointers
 - [ ] Structs
 - [ ] Not gcc (maybe fasm or nasm)
+- [ ] Full C89
+- [ ] Full C99
+- [ ] Compiles a working [tcc](https://github.com/LuaDist/tcc) executable
