@@ -56,9 +56,7 @@ impl<'a> Generator<'a> {
         self.output.push_str(
             "movl %ebp, %esp\n\
             pop %ebp\n\
-            mov %eax, %ebx\n\
-            mov $1, %eax\n\
-            int $0x80\n",
+            ret\n",
         )
     }
 
