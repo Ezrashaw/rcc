@@ -147,6 +147,28 @@ impl<'a> Generator<'a> {
                 jne _{}\n",
                 start,
             ));
+        } else if let Statement::For(init, condition, post_expression, statement) = statement {
+            if let Some(init) = init {
+                self.write_expression(init, vars);
+            }
+            let start = self.label_id;
+            let end = self.label_id + 1;
+            self.label_id += 2;
+            self.output.push_str(&format!("_{start}:\n"));
+            self.write_expression(condition, vars);
+            self.output.push_str(&format!(
+                "cmpl $0, %eax\n\
+                je _{}\n",
+                end,
+            ));
+            self.write_statement(statement, vars);
+            if let Some(post) = post_expression {
+                self.write_expression(post, vars);
+            }
+            self.output.push_str(&format!(
+                "jmp _{start}\n\
+                _{end}:\n"
+            ));
         }
     }
 

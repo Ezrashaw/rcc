@@ -207,6 +207,43 @@ impl<'a> Parser<'a> {
                 }
 
                 return Statement::Do(Box::new(loop_statement), exp);
+            } else if keyword == &Keyword::For {
+                self.read_token();
+
+                if self.read_token() != &Token::OpenParen {
+                    panic!("expected opening paren!")
+                }
+
+                let exp = self.read_optional_exp();
+
+                if self.read_token() != &Token::Semicolon {
+                    panic!("expected semicolon!")
+                }
+
+                let exp1 = self.read_optional_exp();
+
+                if self.read_token() != &Token::Semicolon {
+                    panic!("expected semicolon!")
+                }
+
+                let exp2 = self.read_optional_exp();
+
+                if self.read_token() != &Token::CloseParen {
+                    panic!("expected closing paren!")
+                }
+
+                let statement = self.read_statement();
+
+                return Statement::For(
+                    exp,
+                    if let Some(exp1) = exp1 {
+                        exp1
+                    } else {
+                        Expression::Constant(1)
+                    },
+                    exp2,
+                    Box::new(statement),
+                );
             } else {
                 panic!("Unknown keyword in statement!")
             }
