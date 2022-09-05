@@ -54,19 +54,35 @@ fn main() {
     fs::write("assembly.s", asm).unwrap();
 
     let path = Path::new(&args[1]).with_extension("");
-    Command::new("gcc")
+    Command::new("as")
         .arg("assembly.s")
-        .arg("-m32")
+        .arg("--32")
+        .arg("-o")
+        .arg("assembly.o")
+        .spawn()
+        .expect("failed to assemble")
+        .wait()
+        .unwrap();
+
+    Command::new("ld")
+        .arg("assembly.o")
         .arg("-o")
         .arg(if cfg!(debug_assertions) {
             "output"
         } else {
             path.to_str().unwrap()
         })
+        .arg("-melf_i386")
+        .arg("-dynamic-linker")
+        .arg("/lib/ld-linux.so.2")
+        .arg("-lc")
+        .arg("-L")
+        .arg("/usr/lib32/")
         .spawn()
-        .expect("gcc command failed to run")
+        .expect("failed to link")
         .wait()
         .unwrap();
 
     fs::remove_file("assembly.s").unwrap();
+    fs::remove_file("assembly.o").unwrap();
 }
