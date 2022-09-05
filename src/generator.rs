@@ -136,6 +136,17 @@ impl<'a> Generator<'a> {
                 _{}:\n",
                 start, end
             ));
+        } else if let Statement::Do(statement, exp) = statement {
+            let start = self.label_id;
+            self.label_id += 1;
+            self.output.push_str(&format!("_{}:\n", start));
+            self.write_statement(statement, vars);
+            self.write_expression(exp, vars);
+            self.output.push_str(&format!(
+                "cmpl $0, %eax\n\
+                jne _{}\n",
+                start,
+            ));
         }
     }
 
