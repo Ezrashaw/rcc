@@ -231,7 +231,7 @@ impl<'a> Parser<'a> {
     }
 
     fn read_optional_exp(&mut self) -> Option<Expression> {
-        if self.peek_token() == &Token::Semicolon {
+        if self.peek_token() == &Token::Semicolon || self.peek_token() == &Token::CloseParen {
             None
         } else {
             Some(self.read_expression())
