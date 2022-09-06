@@ -170,8 +170,10 @@ impl<'a> Parser<'a> {
                     Statement::Conditional(controlling, Box::new(statement_true), None)
                 }
             } else if keyword == &Keyword::Break {
+                self.read_token();
                 Statement::Break
             } else if keyword == &Keyword::Continue {
+                self.read_token();
                 Statement::Continue
             } else if keyword == &Keyword::While {
                 self.read_token();
