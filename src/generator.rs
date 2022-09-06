@@ -12,7 +12,7 @@
 
 // TODO: fix the lifetimes!
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use crate::parser::{
     ast::{BlockItem, Declaration, Program, Statement},
@@ -24,6 +24,7 @@ pub struct Generator<'a> {
     output: String,
     label_id: u32,
     stack_index: usize,
+    loops: VecDeque<(u32, u32)>,
 }
 
 impl<'a> Generator<'a> {
@@ -33,6 +34,7 @@ impl<'a> Generator<'a> {
             output: String::new(),
             label_id: 0,
             stack_index: 4,
+            loops: VecDeque::new(),
         }
     }
 
@@ -123,6 +125,7 @@ impl<'a> Generator<'a> {
             let start = self.label_id;
             let end = self.label_id + 1;
             self.label_id += 2;
+            self.loops.push_back((start, end));
             self.output.push_str(&format!("_{}:\n", start));
             self.write_expression(exp, vars);
             self.output.push_str(&format!(
@@ -136,17 +139,22 @@ impl<'a> Generator<'a> {
                 _{}:\n",
                 start, end
             ));
+            self.loops.pop_front();
         } else if let Statement::Do(statement, exp) = statement {
             let start = self.label_id;
-            self.label_id += 1;
+            let end = self.label_id + 1;
+            self.label_id += 2;
+            self.loops.push_back((start, end));
             self.output.push_str(&format!("_{}:\n", start));
             self.write_statement(statement, vars);
             self.write_expression(exp, vars);
             self.output.push_str(&format!(
                 "cmpl $0, %eax\n\
-                jne _{}\n",
-                start,
+                jne _{}\n\n
+                _{}:\n",
+                start, end
             ));
+            self.loops.pop_front();
         } else if let Statement::For(init, condition, post_expression, statement) = statement {
             if let Some(init) = init {
                 self.write_expression(init, vars);
@@ -154,6 +162,7 @@ impl<'a> Generator<'a> {
             let start = self.label_id;
             let end = self.label_id + 1;
             self.label_id += 2;
+            self.loops.push_back((start, end));
             self.output.push_str(&format!("_{start}:\n"));
             self.write_expression(condition, vars);
             self.output.push_str(&format!(
@@ -169,6 +178,20 @@ impl<'a> Generator<'a> {
                 "jmp _{start}\n\
                 _{end}:\n"
             ));
+            self.loops.pop_front();
+        } else if let Statement::Continue = statement {
+            self.output.push_str(&format!(
+                "jmp _{}\n",
+                self.loops
+                    .front()
+                    .expect("continue statement not in loop!")
+                    .0
+            ))
+        } else if let Statement::Break = statement {
+            self.output.push_str(&format!(
+                "jmp _{}\n",
+                self.loops.front().expect("break statement not in loop!").1
+            ))
         }
     }
 
