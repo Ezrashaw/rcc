@@ -1,8 +1,7 @@
-use std::iter::Peekable;
-
 use crate::{
     ctypes::CType,
-    lexer::token::{Keyword, Literal, Token},
+    lexer::token::{Keyword, Literal, Token, TokenData},
+    peekable::PeekableFar,
 };
 
 use self::{
@@ -14,46 +13,40 @@ pub mod ast;
 pub mod expression;
 
 pub struct Parser<T: Iterator<Item = Token>> {
-    input: Peekable<T>, // is this the best way?
+    input: PeekableFar<T>, // is this the best way?
 }
 
 impl<T: Iterator<Item = Token>> Parser<T> {
     pub fn new(input: T) -> Self {
         Self {
-            input: input.peekable(),
+            input: PeekableFar::new(input),
         }
     }
 
     pub fn read_program(&mut self) -> Program {
         let mut functions = Vec::new();
 
-        while self.position < self.input.len() {
+        while self.input.peek().is_some() {
             functions.push(self.read_function());
         }
 
         Program(functions)
     }
 
-    fn read_token(&mut self) -> &Token {
-        let token = if self.position >= self.input.len() {
-            &Token::Illegal
-        } else {
-            &self.input[self.position]
-        };
-        self.position += 1;
-        token
+    fn read_token(&mut self) -> TokenData {
+        self.input.next().unwrap().data
     }
 
-    fn peek_token(&mut self) -> &Token {
-        if self.position >= self.input.len() {
-            &Token::Illegal
-        } else {
-            &self.input[self.position]
-        }
+    fn peek_token(&mut self) -> &TokenData {
+        &self.input.peek().unwrap().data // TODO: merge with `peek_far_token`?
+    }
+
+    fn peek_far_token(&mut self, d: usize) -> &TokenData {
+        &self.input.peek_far(d).unwrap().data
     }
 
     fn read_ident(&mut self) -> String {
-        if let Token::Identifier(ident) = self.read_token() {
+        if let TokenData::Identifier(ident) = self.read_token() {
             ident.clone()
         } else {
             panic!("Expected identifer but found");

@@ -18,6 +18,7 @@ mod ctypes;
 mod generator;
 mod lexer;
 mod parser;
+mod peekable;
 
 pub fn compile(c_code: String, output_path: &Path, filename: String) {
     let mut lexer = Lexer::new(c_code.as_bytes(), filename);
