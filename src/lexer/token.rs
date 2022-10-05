@@ -1,7 +1,28 @@
+use std::path::PathBuf;
+
 use crate::ctypes::{CInteger, CType};
 
+pub struct Token {
+    pub data: TokenData,
+
+    pub file: String,
+    pub line: u32,
+    pub column: u32,
+}
+
+impl Token {
+    pub fn new(data: TokenData, file: String, line: u32, column: u32) -> Self {
+        Self {
+            data,
+            file,
+            line,
+            column,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Token {
+pub enum TokenData {
     Illegal,
     OpenBrace,
     CloseBrace,
