@@ -25,20 +25,6 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // TODO: use the iterator instead
-    // reads all of the input and returns the tokens
-    pub fn read_all(&mut self) -> Vec<TokenData> {
-        let mut tokens = vec![];
-
-        loop {
-            let token = self.read_token();
-            if token == TokenData::Illegal {
-                return tokens;
-            }
-            tokens.push(token);
-        }
-    }
-
     // pops a character from the input
     fn read_char(&mut self) -> char {
         let ch = self.peek_char();
@@ -182,17 +168,16 @@ impl<'a> Lexer<'a> {
 }
 
 // simple iterator pattern for Lexer
-// NOTE: this code is currently unused
 impl Iterator for Lexer<'_> {
     // we are iterating over tokens
-    type Item = TokenData;
+    type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
         // read a token
         let token = self.read_token();
 
         // check whether we have reached EOF
-        if token == TokenData::Illegal {
+        if token.data == TokenData::Illegal {
             None
         } else {
             Some(token)

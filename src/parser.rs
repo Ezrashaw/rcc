@@ -1,3 +1,5 @@
+use std::iter::Peekable;
+
 use crate::{
     ctypes::CType,
     lexer::token::{Keyword, Literal, Token},
@@ -11,15 +13,15 @@ use self::{
 pub mod ast;
 pub mod expression;
 
-#[derive(Debug)]
-pub struct Parser<'a> {
-    input: &'a [Token],
-    pub position: usize,
+pub struct Parser<T: Iterator<Item = Token>> {
+    input: Peekable<T>, // is this the best way?
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(input: &'a [Token]) -> Self {
-        Self { input, position: 0 }
+impl<T: Iterator<Item = Token>> Parser<T> {
+    pub fn new(input: T) -> Self {
+        Self {
+            input: input.peekable(),
+        }
     }
 
     pub fn read_program(&mut self) -> Program {

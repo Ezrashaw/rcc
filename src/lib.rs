@@ -19,8 +19,8 @@ mod generator;
 mod lexer;
 mod parser;
 
-pub fn compile(c_code: String, output_path: &Path) {
-    let mut lexer = Lexer::new(c_code.as_bytes());
+pub fn compile(c_code: String, output_path: &Path, filename: String) {
+    let mut lexer = Lexer::new(c_code.as_bytes(), filename);
     let tokens = lexer.read_all();
 
     #[cfg(debug_assertions)]

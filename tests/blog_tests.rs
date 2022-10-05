@@ -34,7 +34,11 @@ fn run_valid(path: &Path) {
         let test = test.unwrap();
         println!("\t {} (VALID):", test.file_name().to_str().unwrap());
         // TODO: again, better error handling would be nice so we can display nicely to `cargo test`
-        rcc::compile(fs::read_to_string(test.path()).unwrap(), output);
+        rcc::compile(
+            fs::read_to_string(test.path()).unwrap(),
+            output,
+            "blog_post test",
+        ); // TODO: temporary name for test file passed to compiler
         fs::remove_file(Path::new("output")).unwrap();
     }
 }
