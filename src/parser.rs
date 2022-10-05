@@ -1,4 +1,5 @@
 use crate::{
+    expect_token,
     lexer::token::{Token, TokenKind},
     peekable::PeekableFar,
 };
@@ -34,7 +35,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn read_args(&mut self) -> Vec<String> {
-        self.expect_token(TokenKind::OpenParen);
+        expect_token!(self, TokenKind::OpenParen);
 
         let mut args = Vec::new();
 
@@ -44,7 +45,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
 
         while self.peek_token() != &TokenKind::CloseParen {
-            self.expect_token(TokenKind::Comma);
+            expect_token!(self, TokenKind::Comma);
 
             self.read_type();
             args.push(self.read_identifier());
@@ -77,7 +78,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn read_block(&mut self) -> Vec<BlockItem> {
         let mut block = vec![];
 
-        self.expect_token(TokenKind::OpenBrace);
+        expect_token!(self, TokenKind::OpenBrace);
 
         loop {
             if self.peek_token() == &TokenKind::CloseBrace {
@@ -103,7 +104,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 BlockItem::Declaration(name, None)
             };
 
-            self.expect_token(TokenKind::Semicolon);
+            expect_token!(self, TokenKind::Semicolon);
 
             decl
         } else {
@@ -124,11 +125,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         } else if let TokenKind::Keyword_If = token {
             self.read_token();
 
-            self.expect_token(TokenKind::OpenParen);
+            expect_token!(self, TokenKind::OpenParen);
 
             let controlling = self.read_expression();
 
-            self.expect_token(TokenKind::CloseParen);
+            expect_token!(self, TokenKind::CloseParen);
 
             let statement_true = self.read_statement();
 
@@ -158,7 +159,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             return statement;
         }
 
-        self.expect_token(TokenKind::Semicolon);
+        expect_token!(self, TokenKind::Semicolon);
 
         statement
     }
@@ -191,7 +192,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             self.read_token();
 
             let e1 = self.read_expression();
-            self.expect_token(TokenKind::Colon);
+            expect_token!(self, TokenKind::Colon);
             let e2 = self.read_conditional_exp();
 
             Expression::Conditional(Box::new(exp), Box::new(e1), Box::new(e2))
@@ -335,7 +336,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                     args.push(self.read_expression());
                 }
                 while self.peek_token() != &TokenKind::CloseParen {
-                    self.expect_token(TokenKind::Comma);
+                    expect_token!(self, TokenKind::Comma);
 
                     args.push(self.read_expression());
                 }
@@ -347,7 +348,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         match token {
             TokenKind::OpenParen => {
                 let exp = self.read_expression();
-                self.expect_token(TokenKind::CloseParen);
+                expect_token!(self, TokenKind::CloseParen);
 
                 return exp;
             }
