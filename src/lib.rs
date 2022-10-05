@@ -11,7 +11,7 @@
 use std::{fs, path::Path, process::Command};
 
 use generator::Generator;
-use lexer::Lexer;
+use lexer::{token::Token, Lexer};
 use parser::Parser;
 
 mod ctypes;
@@ -21,7 +21,7 @@ mod parser;
 
 pub fn compile(c_code: String, output_path: &Path, filename: String) {
     let mut lexer = Lexer::new(c_code.as_bytes(), filename);
-    let tokens = lexer.read_all();
+    let tokens: Vec<Token> = lexer.collect();
 
     #[cfg(debug_assertions)]
     {
@@ -31,7 +31,7 @@ pub fn compile(c_code: String, output_path: &Path, filename: String) {
         }
     }
 
-    let mut parser = Parser::new(&tokens);
+    let mut parser = Parser::new(tokens.into_iter());
     let ast = parser.read_program();
 
     #[cfg(debug_assertions)]

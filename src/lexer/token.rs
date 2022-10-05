@@ -1,11 +1,10 @@
-use std::path::PathBuf;
-
 use crate::ctypes::{CInteger, CType};
 
+#[derive(Debug)]
 pub struct Token {
     pub data: TokenData,
 
-    pub file: String,
+    pub file: String, // TODO: make this a path
     pub line: u32,
     pub column: u32,
 }
