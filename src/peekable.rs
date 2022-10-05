@@ -35,8 +35,7 @@ impl<I: Iterator> Iterator for PeekableFar<I> {
 
     #[inline]
     fn next(&mut self) -> Option<I::Item> {
-        let pe = [1].into_iter().peekable();
-        if self.peeked.len() == 0 {
+        if self.peeked.is_empty() {
             self.iter.next()
         } else {
             self.peeked.pop_front().unwrap()

@@ -47,7 +47,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn read_ident(&mut self) -> String {
         if let TokenData::Identifier(ident) = self.read_token() {
-            ident.clone()
+            ident
         } else {
             panic!("Expected identifer but found");
         }
@@ -55,7 +55,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn read_type(&mut self) -> CType {
         if let TokenData::Keyword(Keyword::DataType(data_type)) = self.read_token() {
-            data_type.clone()
+            data_type
         } else {
             panic!("Expected type but found");
         }
@@ -213,7 +213,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         if let TokenData::Assignment = token {
             let ident = self.read_token();
             if let TokenData::Identifier(name) = ident {
-                let name = name.clone(); // TODO: we shouldn't clone identifiers like this, or at all!
+                let name = name; // TODO: we shouldn't clone identifiers like this, or at all!
                 self.read_token(); // assignment
 
                 let exp = self.read_expression();
@@ -370,7 +370,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn read_factor(&mut self) -> Expression {
-        let token = self.read_token().clone();
+        let token = self.read_token();
 
         if let TokenData::Identifier(ref name) = token {
             if self.peek_token() == &TokenData::OpenParen {

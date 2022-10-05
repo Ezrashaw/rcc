@@ -32,13 +32,10 @@ impl<'a> Lexer<'a> {
         self.position += 1;
         self.column += 1;
 
-        match ch {
-            '\n' => {
-                // TODO: this is *nix only newlines; support '\r' and '\n'
-                self.line += 1;
-                self.column = 1;
-            }
-            _ => (),
+        if ch == '\n' {
+            // TODO: this is *nix only newlines; support '\r' and '\n'
+            self.line += 1;
+            self.column = 1;
         }
 
         ch

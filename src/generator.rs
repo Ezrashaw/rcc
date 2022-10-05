@@ -247,7 +247,7 @@ impl<'a> Generator<'a> {
         self.label_id += if state_false.is_some() { 2 } else { 1 };
 
         self.write_expression(cntrl, vars);
-        if state_false.is_some() {
+        if let Some(state_false) = state_false {
             self.output.push_str(&format!(
                 "cmpl $0, %eax\n\
                 je _{start_id}\n"
@@ -259,7 +259,7 @@ impl<'a> Generator<'a> {
                 _{start_id}:\n",
                 start_id + 1
             ));
-            self.write_statement(state_false.unwrap(), vars, current_scope);
+            self.write_statement(state_false, vars, current_scope);
 
             self.output.push_str(&format!("_{}:\n", start_id + 1));
         } else {
@@ -280,8 +280,8 @@ impl<'a> Generator<'a> {
                 "movl %eax, %ecx\n\
                 pop %eax\n{}",
                 match op {
-                    &BinOperator::Subtraction => "subl %ecx, %eax\n",
-                    &BinOperator::Division =>
+                    BinOperator::Subtraction => "subl %ecx, %eax\n",
+                    BinOperator::Division =>
                         "cdq\n\
                         idivl %ecx\n",
                     _ => panic!("Maths is wrong!"),

@@ -8,6 +8,8 @@
 
 // TODO: `lib.rs` is completely incorrect, we shouldn't print to the screen OR touch the filesystem
 
+#![allow(clippy::format_push_string)] // TODO: fix all these
+
 use std::{fs, path::Path, process::Command};
 
 use generator::Generator;
@@ -21,7 +23,7 @@ mod parser;
 mod peekable;
 
 pub fn compile(c_code: String, output_path: &Path, filename: String) {
-    let mut lexer = Lexer::new(c_code.as_bytes(), filename);
+    let lexer = Lexer::new(c_code.as_bytes(), filename);
     let tokens: Vec<Token> = lexer.collect();
 
     #[cfg(debug_assertions)]

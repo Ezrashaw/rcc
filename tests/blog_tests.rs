@@ -23,7 +23,7 @@ fn run_invalid(path: &Path) {
     }
 }
 
-fn compile_invalid(test: String, output: &Path) {
+fn compile_invalid(_test: String, _output: &Path) {
     // TODO: we need proper error handling. THIS JUST CRASHES THE TEST!!!!
     //rcc::compile(test, output);
 }
