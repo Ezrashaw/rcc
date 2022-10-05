@@ -36,6 +36,7 @@ impl<I: Iterator> Iterator for PeekableFar<I> {
 
     #[inline]
     fn next(&mut self) -> Option<I::Item> {
+        let pe = [1].into_iter().peekable();
         if self.peeked.len() == 0 {
             self.iter.next()
         } else {
@@ -45,4 +46,56 @@ impl<I: Iterator> Iterator for PeekableFar<I> {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use super::PeekableFar;
+
+    #[test]
+    pub fn std_lib_peekable() {
+        let xs = [1, 2, 3];
+
+        let mut iter = PeekableFar::new(xs.iter());
+
+        // `peek` lets us see into the future
+        assert_eq!(iter.peek(), Some(&&1));
+        assert_eq!(iter.next(), Some(&1));
+
+        assert_eq!(iter.next(), Some(&2));
+
+        // we can `peek` multiple times, the iterator won't advance
+        assert_eq!(iter.peek(), Some(&&3));
+        assert_eq!(iter.peek(), Some(&&3));
+
+        assert_eq!(iter.next(), Some(&3));
+
+        // after the iterator is finished, so is `peek`
+        assert_eq!(iter.peek(), None);
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    pub fn far_peekable() {
+        let xs = [1, 2, 3];
+
+        let mut iter = PeekableFar::new(xs.iter());
+
+        // `peek_far` lets us see futher into the future
+        assert_eq!(iter.peek_far(2), Some(&&2));
+        assert_eq!(iter.peek_far(1), Some(&&1));
+
+        // the iterator hasn't advanced and isn't affected by peeking far
+        assert_eq!(iter.next(), Some(&1));
+        assert_eq!(iter.next(), Some(&2));
+
+        // `peek` is equal to `peek_far(1)` and works just as fine
+        assert_eq!(iter.peek(), Some(&&3));
+        assert_eq!(iter.peek_far(1), Some(&&3));
+
+        assert_eq!(iter.next(), Some(&3));
+
+        // `peek_far` returns `None` for out-of-bound values
+        assert_eq!(iter.peek_far(100), None);
+        // and when the iterator is finished
+        assert_eq!(iter.peek_far(1), None);
+        assert_eq!(iter.next(), None);
+    }
+}
