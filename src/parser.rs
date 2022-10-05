@@ -34,9 +34,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn read_args(&mut self) -> Vec<String> {
-        if self.read_token() != TokenKind::OpenParen {
-            panic!("No opening argument paren!")
-        }
+        self.expect_token(TokenKind::OpenParen);
+
         let mut args = Vec::new();
 
         if self.peek_token() != &TokenKind::CloseParen {
@@ -45,9 +44,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
 
         while self.peek_token() != &TokenKind::CloseParen {
-            if self.read_token() != TokenKind::Comma {
-                panic!("expected comma!")
-            }
+            self.expect_token(TokenKind::Comma);
+
             self.read_type();
             args.push(self.read_identifier());
         }
@@ -79,9 +77,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn read_block(&mut self) -> Vec<BlockItem> {
         let mut block = vec![];
 
-        if self.read_token() != TokenKind::OpenBrace {
-            panic!("No opening block brace!")
-        }
+        self.expect_token(TokenKind::OpenBrace);
 
         loop {
             if self.peek_token() == &TokenKind::CloseBrace {
@@ -107,9 +103,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 BlockItem::Declaration(name, None)
             };
 
-            if self.read_token() != TokenKind::Semicolon {
-                panic!("Missing semicolon!");
-            }
+            self.expect_token(TokenKind::Semicolon);
 
             decl
         } else {
@@ -130,15 +124,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         } else if let TokenKind::Keyword_If = token {
             self.read_token();
 
-            if self.read_token() != TokenKind::OpenParen {
-                panic!("Exprected open bracket!")
-            }
+            self.expect_token(TokenKind::OpenParen);
 
             let controlling = self.read_expression();
 
-            if self.read_token() != TokenKind::CloseParen {
-                panic!("Exprected closing bracket!")
-            }
+            self.expect_token(TokenKind::CloseParen);
 
             let statement_true = self.read_statement();
 
@@ -168,9 +158,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             return statement;
         }
 
-        if self.read_token() != TokenKind::Semicolon {
-            panic!("Expected semicolon!");
-        }
+        self.expect_token(TokenKind::Semicolon);
 
         statement
     }
@@ -180,6 +168,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
         if let TokenKind::Assignment = token {
             let ident = self.read_token();
+            // TODO: `self.read_ident` here
             if let TokenKind::Identifier(name) = ident {
                 let name = name; // TODO: we shouldn't clone identifiers like this, or at all!
                 self.read_token(); // assignment
@@ -202,9 +191,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             self.read_token();
 
             let e1 = self.read_expression();
-            if self.read_token() != TokenKind::Colon {
-                panic!("expected colon in ternary conditional!");
-            }
+            self.expect_token(TokenKind::Colon);
             let e2 = self.read_conditional_exp();
 
             Expression::Conditional(Box::new(exp), Box::new(e1), Box::new(e2))
@@ -348,9 +335,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                     args.push(self.read_expression());
                 }
                 while self.peek_token() != &TokenKind::CloseParen {
-                    if self.read_token() != TokenKind::Comma {
-                        panic!("Expected comma!");
-                    }
+                    self.expect_token(TokenKind::Comma);
+
                     args.push(self.read_expression());
                 }
                 self.read_token();
@@ -361,9 +347,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         match token {
             TokenKind::OpenParen => {
                 let exp = self.read_expression();
-                if self.read_token() != TokenKind::CloseParen {
-                    panic!("Expected close paren!");
-                }
+                self.expect_token(TokenKind::CloseParen);
+
                 return exp;
             }
             TokenKind::Literal_Integer(int) => return Expression::Constant(int),

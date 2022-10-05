@@ -43,4 +43,17 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     pub(super) fn read_type(&mut self) -> CType {
         unwrap_token!(self.input.next().unwrap(), TokenKind::Keyword_DataType)
     }
+
+    pub(super) fn expect_token(&mut self, kind: TokenKind) {
+        let tok = self.read_token();
+        if tok != kind {
+            // Err(CompileError::new(
+            //     CompileErrorKind::ExpectedTokenButFoundToken {
+            //         expected: kind,
+            //         found: tok,
+            //     },
+            // ))
+            panic!("unexpected token!");
+        }
+    }
 }
