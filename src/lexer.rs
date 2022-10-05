@@ -38,6 +38,7 @@ impl<'a> Lexer<'a> {
                 self.line += 1;
                 self.column = 1;
             }
+            _ => (),
         }
 
         ch
@@ -63,7 +64,7 @@ impl<'a> Lexer<'a> {
 
         let kind = self.read_tokenkind();
 
-        Token::new(kind, self.file_name, line, column)
+        Token::new(kind, self.file_name.clone(), line, column) // TODO: `.clone()` AAAAARRGGHHH!!!!
     }
 
     fn read_tokenkind(&mut self) -> TokenData {

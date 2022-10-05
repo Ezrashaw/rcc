@@ -17,6 +17,6 @@ fn main() {
         } else {
             &output_path
         },
-        &args[1],
+        args[1].clone(),
     );
 }

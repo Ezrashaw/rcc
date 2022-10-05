@@ -37,7 +37,7 @@ fn run_valid(path: &Path) {
         rcc::compile(
             fs::read_to_string(test.path()).unwrap(),
             output,
-            "blog_post test",
+            "blog_post test".to_owned(),
         ); // TODO: temporary name for test file passed to compiler
         fs::remove_file(Path::new("output")).unwrap();
     }
