@@ -1,5 +1,4 @@
 use crate::{
-    ctypes::CType,
     lexer::token::{Token, TokenKind},
     peekable::PeekableFar,
 };
@@ -11,6 +10,7 @@ use self::{
 
 pub mod ast;
 pub mod expression;
+mod helpers;
 
 pub struct Parser<T: Iterator<Item = Token>> {
     input: PeekableFar<T>,
@@ -31,34 +31,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
 
         Program(functions)
-    }
-
-    fn read_token(&mut self) -> TokenKind {
-        self.input.next().unwrap().kind
-    }
-
-    fn peek_token(&mut self) -> &TokenKind {
-        &self.input.peek().unwrap().kind // TODO: merge with `peek_far_token`?
-    }
-
-    fn peek_far_token(&mut self, d: usize) -> &TokenKind {
-        &self.input.peek_far(d).unwrap().kind
-    }
-
-    fn read_ident(&mut self) -> String {
-        if let TokenKind::Identifier(ident) = self.read_token() {
-            ident
-        } else {
-            panic!("Expected identifer but found");
-        }
-    }
-
-    fn read_type(&mut self) -> CType {
-        if let TokenKind::Keyword_DataType(data_type) = self.read_token() {
-            data_type
-        } else {
-            panic!("Expected type but found");
-        }
     }
 
     fn read_args(&mut self) -> Vec<String> {
