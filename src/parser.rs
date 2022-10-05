@@ -41,7 +41,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
         if self.peek_token() != &TokenKind::CloseParen {
             self.read_type();
-            args.push(self.read_ident());
+            args.push(self.read_identifier());
         }
 
         while self.peek_token() != &TokenKind::CloseParen {
@@ -49,7 +49,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
                 panic!("expected comma!")
             }
             self.read_type();
-            args.push(self.read_ident());
+            args.push(self.read_identifier());
         }
 
         self.read_token();
@@ -58,7 +58,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn read_function(&mut self) -> Function {
         let return_type = self.read_type();
-        let name = self.read_ident();
+        let name = self.read_identifier();
         let parameters = self.read_args();
 
         let block = if self.peek_token() == &TokenKind::Semicolon {
@@ -98,7 +98,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn read_block_item(&mut self) -> BlockItem {
         let item = if let TokenKind::Keyword_DataType(_) = self.peek_token() {
             self.read_token(); // ctype
-            let name = self.read_ident();
+            let name = self.read_identifier();
             let assign = self.peek_token();
             let decl = if assign == &TokenKind::Assignment {
                 self.read_token();
@@ -373,7 +373,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
 
         //unary operator parsing
-
         let operator = match token {
             TokenKind::Minus => UnaryOperator::Negation,
             TokenKind::BitwiseComplement => UnaryOperator::BitwiseComplement,

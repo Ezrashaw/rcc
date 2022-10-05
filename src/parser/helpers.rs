@@ -36,12 +36,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         &self.input.peek_far(d).unwrap().kind
     }
 
-    // TODO: delete, this can be inlined with the macro (its simple now!)
-    pub(super) fn read_ident(&mut self) -> String {
+    pub(super) fn read_identifier(&mut self) -> String {
         unwrap_token!(self.input.next().unwrap(), TokenKind::Identifier)
     }
 
-    // TODO: delete, this can be inlined with the macro (its simple now!)
     pub(super) fn read_type(&mut self) -> CType {
         unwrap_token!(self.input.next().unwrap(), TokenKind::Keyword_DataType)
     }
