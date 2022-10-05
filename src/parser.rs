@@ -13,7 +13,7 @@ pub mod ast;
 pub mod expression;
 
 pub struct Parser<T: Iterator<Item = Token>> {
-    input: PeekableFar<T>, // is this the best way?
+    input: PeekableFar<T>,
 }
 
 impl<T: Iterator<Item = Token>> Parser<T> {

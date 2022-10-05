@@ -2,7 +2,6 @@ use std::collections::VecDeque;
 
 pub struct PeekableFar<I: Iterator> {
     iter: I,
-    /// Remember a peeked value, even if it was None.
     peeked: VecDeque<Option<I::Item>>,
 }
 
