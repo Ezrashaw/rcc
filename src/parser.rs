@@ -1,4 +1,5 @@
 use crate::{
+    error::CompileError,
     expect_token, expect_token_soft,
     lexer::token::{Token, TokenKind},
     peekable::PeekableFar,
@@ -24,17 +25,17 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
     }
 
-    pub fn read_program(&mut self) -> Program {
+    pub fn read_program(&mut self) -> Result<Program, CompileError> {
         let mut functions = Vec::new();
 
         while self.input.peek().is_some() {
             functions.push(self.read_function());
         }
 
-        Program(functions)
+        Ok(Program(functions))
     }
 
-    fn read_args(&mut self) -> Vec<String> {
+    fn read_args(&mut self) -> Result<Vec<String>, CompileError> {
         expect_token!(self, TokenKind::OpenParen);
 
         let mut args = Vec::new();
@@ -52,10 +53,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
 
         self.read_token();
-        args
+        Ok(args)
     }
 
-    fn read_function(&mut self) -> Function {
+    fn read_function(&mut self) -> Result<Function, CompileError> {
         let return_type = self.read_type();
         let name = self.read_identifier();
         let parameters = self.read_args();
@@ -67,15 +68,15 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             Some(self.read_block())
         };
 
-        Function {
+        Ok(Function {
             name,
             return_type,
             parameters,
             block,
-        }
+        })
     }
 
-    fn read_block(&mut self) -> Vec<BlockItem> {
+    fn read_block(&mut self) -> Result<Vec<BlockItem>, CompileError> {
         let mut block = vec![];
 
         loop {
@@ -86,10 +87,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             block.push(self.read_block_item());
         }
 
-        block
+        Ok(block)
     }
 
-    fn read_block_item(&mut self) -> BlockItem {
+    fn read_block_item(&mut self) -> Result<BlockItem, CompileError> {
         let item = if expect_token_soft!(self, TokenKind::Keyword_DataType(_)) {
             let name = self.read_identifier();
             let assign = self.peek_token();
@@ -107,10 +108,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             BlockItem::Statement(self.read_statement())
         };
 
-        item
+        Ok(item)
     }
 
-    fn read_statement(&mut self) -> Statement {
+    fn read_statement(&mut self) -> Result<Statement, CompileError> {
         let statement = if expect_token_soft!(self, TokenKind::Keyword_Return) {
             Statement::Return(self.read_expression())
         } else if expect_token_soft!(self, TokenKind::Keyword_If) {
@@ -148,10 +149,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
         expect_token!(self, TokenKind::Semicolon);
 
-        statement
+        Ok(statement)
     }
 
-    fn read_expression(&mut self) -> Expression {
+    fn read_expression(&mut self) -> Result<Expression, CompileError> {
         let token = self.peek_far_token(2);
 
         if let TokenKind::Assignment = token {
@@ -163,10 +164,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             return Expression::Assign(ident, Box::new(exp));
         }
 
-        self.read_conditional_exp()
+        Ok(self.read_conditional_exp())
     }
 
-    fn read_conditional_exp(&mut self) -> Expression {
+    fn read_conditional_exp(&mut self) -> Result<Expression, CompileError> {
         let exp = self.read_logical_or_exp();
 
         if self.peek_token() == &TokenKind::QuestionMark {
@@ -176,13 +177,17 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             expect_token!(self, TokenKind::Colon);
             let e2 = self.read_conditional_exp();
 
-            Expression::Conditional(Box::new(exp), Box::new(e1), Box::new(e2))
+            Ok(Expression::Conditional(
+                Box::new(exp),
+                Box::new(e1),
+                Box::new(e2),
+            ))
         } else {
-            exp
+            Ok(exp)
         }
     }
 
-    fn read_logical_or_exp(&mut self) -> Expression {
+    fn read_logical_or_exp(&mut self) -> Result<Expression, CompileError> {
         let mut exp = self.read_logical_and_exp();
 
         let mut next_token = self.peek_token();
@@ -198,10 +203,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             next_token = self.peek_token();
         }
 
-        exp
+        Ok(exp)
     }
 
-    fn read_logical_and_exp(&mut self) -> Expression {
+    fn read_logical_and_exp(&mut self) -> Result<Expression, CompileError> {
         let mut exp = self.read_equality_exp();
 
         let mut next_token = self.peek_token();
@@ -217,10 +222,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             next_token = self.peek_token();
         }
 
-        exp
+        Ok(exp)
     }
 
-    fn read_equality_exp(&mut self) -> Expression {
+    fn read_equality_exp(&mut self) -> Result<Expression, CompileError> {
         let mut exp = self.read_relational_exp();
 
         let mut next_token = self.peek_token();
@@ -237,10 +242,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             next_token = self.peek_token();
         }
 
-        exp
+        Ok(exp)
     }
 
-    fn read_relational_exp(&mut self) -> Expression {
+    fn read_relational_exp(&mut self) -> Result<Expression, CompileError> {
         let mut exp = self.read_additive_exp();
 
         let mut next_token = self.peek_token();
@@ -263,10 +268,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             next_token = self.peek_token();
         }
 
-        exp
+        Ok(exp)
     }
 
-    fn read_additive_exp(&mut self) -> Expression {
+    fn read_additive_exp(&mut self) -> Result<Expression, CompileError> {
         let mut term = self.read_term();
 
         let mut next_token = self.peek_token();
@@ -283,10 +288,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             next_token = self.peek_token();
         }
 
-        term
+        Ok(term)
     }
 
-    fn read_term(&mut self) -> Expression {
+    fn read_term(&mut self) -> Result<Expression, CompileError> {
         let mut factor = self.read_factor();
 
         let mut next_token = self.peek_token();
@@ -303,10 +308,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             next_token = self.peek_token();
         }
 
-        factor
+        Ok(factor)
     }
 
-    fn read_factor(&mut self) -> Expression {
+    fn read_factor(&mut self) -> Result<Expression, CompileError> {
         let token = self.read_token();
 
         if let TokenKind::Identifier(ref name) = token {
@@ -348,6 +353,6 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
         let inner = self.read_factor();
 
-        Expression::UnaryOp(operator, Box::new(inner))
+        Ok(Expression::UnaryOp(operator, Box::new(inner)))
     }
 }
