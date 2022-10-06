@@ -17,6 +17,7 @@ use lexer::{token::Token, Lexer};
 use parser::Parser;
 
 mod ctypes;
+mod error;
 mod generator;
 mod lexer;
 mod parser;
