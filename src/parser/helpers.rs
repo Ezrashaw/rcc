@@ -25,7 +25,7 @@ macro_rules! unwrap_token {
 #[macro_export]
 macro_rules! expect_token {
     ($self:expr, $expected:pat) => {{
-        let __eval = $self.read_token();
+        let __eval = $self.read_token()?;
         match __eval {
             $expected => Ok(()),
             _ => Err($crate::error::CompileError::new(
@@ -41,9 +41,9 @@ macro_rules! expect_token {
 #[macro_export]
 macro_rules! expect_token_soft {
     ($self:expr, $expected:pat) => {{
-        match $self.peek_token() {
+        match $self.peek_token()? {
             $expected => {
-                $self.read_token();
+                $self.read_token()?;
                 true
             }
             _ => false,
