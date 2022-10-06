@@ -9,36 +9,34 @@ fn blog_tests() {
         .unwrap()
         .map(|d| d.unwrap())
     {
-        println!("DIRECTORY {:?}:", stage.file_name().to_str().unwrap());
+        for test in fs::read_dir(&stage.path().join("invalid/")).unwrap() {
+            let result = compile(&test.as_ref().unwrap().path());
+            if result.is_ok() {
+                println!(
+                    "Test: {:?} was meant to fail but succeeded.",
+                    test.unwrap().path()
+                );
+            }
+        }
 
-        run_invalid(&stage.path().join("invalid/"));
-        run_valid(&stage.path().join("valid/"));
+        for test in fs::read_dir(&stage.path().join("valid/")).unwrap() {
+            let result = compile(&test.as_ref().unwrap().path());
+            if let Err(err) = result {
+                println!("Test: {:?} failed:\n{}", test.unwrap().path(), err);
+            }
+        }
     }
 }
 
-fn run_invalid(path: &Path) {
-    let output = Path::new("output");
-    for test in fs::read_dir(path).unwrap() {
-        compile_invalid(fs::read_to_string(test.unwrap().path()).unwrap(), output);
-    }
-}
+fn compile(path: &Path) -> Result<(), rcc::error::CompileError> {
+    rcc::compile(
+        fs::read_to_string(path).unwrap(),
+        Path::new("output"),
+        "blog_post test".to_owned(),
+        false,
+    )?; // TODO: temporary name for test file passed to compiler
 
-fn compile_invalid(_test: String, _output: &Path) {
-    // TODO: we need proper error handling. THIS JUST CRASHES THE TEST!!!!
-    //rcc::compile(test, output);
-}
+    fs::remove_file(Path::new("output")).unwrap();
 
-fn run_valid(path: &Path) {
-    let output = Path::new("output");
-    for test in fs::read_dir(path).unwrap() {
-        let test = test.unwrap();
-        println!("\t {} (VALID):", test.file_name().to_str().unwrap());
-        // TODO: again, better error handling would be nice so we can display nicely to `cargo test`
-        rcc::compile(
-            fs::read_to_string(test.path()).unwrap(),
-            output,
-            "blog_post test".to_owned(),
-        ); // TODO: temporary name for test file passed to compiler
-        fs::remove_file(Path::new("output")).unwrap();
-    }
+    Ok(())
 }

@@ -18,6 +18,7 @@ fn main() {
             &output_path
         },
         args[1].clone(),
+        cfg!(debug_assertions),
     );
 
     if let Err(err) = result {

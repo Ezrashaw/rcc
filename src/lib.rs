@@ -18,18 +18,22 @@ use lexer::{token::Token, Lexer};
 use parser::Parser;
 
 mod ctypes;
-mod error;
+pub mod error;
 mod generator;
 mod lexer;
 mod parser;
 mod peekable;
 
-pub fn compile(c_code: String, output_path: &Path, filename: String) -> Result<(), CompileError> {
+pub fn compile(
+    c_code: String,
+    output_path: &Path,
+    filename: String,
+    debug: bool,
+) -> Result<(), CompileError> {
     let lexer = Lexer::new(c_code.as_bytes(), filename);
     let tokens: Vec<Token> = lexer.collect();
 
-    #[cfg(debug_assertions)]
-    {
+    if debug {
         println!("=====TOKENS=====");
         for token in &tokens {
             println!("{:?}", token);
@@ -39,8 +43,7 @@ pub fn compile(c_code: String, output_path: &Path, filename: String) -> Result<(
     let mut parser = Parser::new(tokens.into_iter());
     let ast = parser.read_program()?;
 
-    #[cfg(debug_assertions)]
-    {
+    if debug {
         println!("=====AST=====");
         println!("{:?}", ast);
     }
@@ -48,8 +51,7 @@ pub fn compile(c_code: String, output_path: &Path, filename: String) -> Result<(
     let generator = Generator::new(&ast);
     let asm = generator.gen_asm();
 
-    #[cfg(debug_assertions)]
-    {
+    if debug {
         println!("=====ASM=====");
         println!("{}", asm);
     }
