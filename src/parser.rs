@@ -1,5 +1,5 @@
 use crate::{
-    expect_token,
+    expect_token, expect_token_soft,
     lexer::token::{Token, TokenKind},
     peekable::PeekableFar,
 };
@@ -60,10 +60,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let name = self.read_identifier();
         let parameters = self.read_args();
 
-        let block = if self.peek_token() == &TokenKind::Semicolon {
-            self.read_token();
+        let block = if expect_token_soft!(self, TokenKind::Semicolon) {
             None
         } else {
+            expect_token!(self, TokenKind::OpenBrace);
             Some(self.read_block())
         };
 
@@ -78,11 +78,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn read_block(&mut self) -> Vec<BlockItem> {
         let mut block = vec![];
 
-        expect_token!(self, TokenKind::OpenBrace);
-
         loop {
-            if self.peek_token() == &TokenKind::CloseBrace {
-                self.read_token();
+            if expect_token_soft!(self, TokenKind::CloseBrace) {
                 break;
             }
 
@@ -93,8 +90,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn read_block_item(&mut self) -> BlockItem {
-        let item = if let TokenKind::Keyword_DataType(_) = self.peek_token() {
-            self.read_token(); // ctype
+        let item = if expect_token_soft!(self, TokenKind::Keyword_DataType(_)) {
             let name = self.read_identifier();
             let assign = self.peek_token();
             let decl = if assign == &TokenKind::Assignment {
@@ -115,16 +111,9 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn read_statement(&mut self) -> Statement {
-        let token = self.peek_token();
-
-        let statement = if let TokenKind::Keyword_Return = token {
-            self.read_token();
-            let exp = self.read_expression();
-
-            Statement::Return(exp)
-        } else if let TokenKind::Keyword_If = token {
-            self.read_token();
-
+        let statement = if expect_token_soft!(self, TokenKind::Keyword_Return) {
+            Statement::Return(self.read_expression())
+        } else if expect_token_soft!(self, TokenKind::Keyword_If) {
             expect_token!(self, TokenKind::OpenParen);
 
             let controlling = self.read_expression();
@@ -133,9 +122,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
             let statement_true = self.read_statement();
 
-            if self.peek_token() == &TokenKind::Keyword_Else {
-                self.read_token();
-
+            if expect_token_soft!(self, TokenKind::Keyword_Else) {
                 let statement_false = self.read_statement();
 
                 Statement::Conditional(
@@ -146,7 +133,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             } else {
                 Statement::Conditional(controlling, Box::new(statement_true), None)
             }
-        } else if let TokenKind::OpenBrace = token {
+        } else if expect_token_soft!(self, TokenKind::OpenBrace) {
             Statement::Compound(self.read_block())
         } else {
             Statement::Expression(self.read_expression())
@@ -168,18 +155,12 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let token = self.peek_far_token(2);
 
         if let TokenKind::Assignment = token {
-            let ident = self.read_token();
-            // TODO: `self.read_ident` here
-            if let TokenKind::Identifier(name) = ident {
-                let name = name; // TODO: we shouldn't clone identifiers like this, or at all!
-                self.read_token(); // assignment
+            let ident = self.read_identifier();
+            self.read_token(); // assignment
 
-                let exp = self.read_expression();
+            let exp = self.read_expression();
 
-                return Expression::Assign(name, Box::new(exp));
-            } else {
-                panic!("Expected identifier! {:?}", ident);
-            }
+            return Expression::Assign(ident, Box::new(exp));
         }
 
         self.read_conditional_exp()
@@ -329,8 +310,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let token = self.read_token();
 
         if let TokenKind::Identifier(ref name) = token {
-            if self.peek_token() == &TokenKind::OpenParen {
-                self.read_token();
+            if expect_token_soft!(self, TokenKind::OpenParen) {
                 let mut args = Vec::new();
                 if self.peek_token() != &TokenKind::CloseParen {
                     args.push(self.read_expression());

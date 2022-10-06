@@ -27,17 +27,30 @@ macro_rules! unwrap_token {
 macro_rules! expect_token {
     ($self:expr, $expected:pat) => {{
         let __eval = $self.read_token();
-        if let $expected = __eval {
+        match __eval {
             // Ok(())
-            ()
-        } else {
+            $expected => (),
+
             // Err(CompileError::new(
             //     CompileErrorKind::ExpectedTokenButFoundToken {
             //         expected: stringify!($expected),
             //         found: stringify!(__eval),
             //     },
             // ))
-            panic!("unexpected token");
+            _ => panic!("unexpected token"),
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! expect_token_soft {
+    ($self:expr, $expected:pat) => {{
+        match $self.peek_token() {
+            $expected => {
+                $self.read_token();
+                true
+            }
+            _ => false,
         }
     }};
 }
