@@ -1,5 +1,5 @@
 use crate::{
-    error::CompileError,
+    error::{CompileError, CompileErrorKind},
     expect_token, expect_token_soft,
     lexer::token::{Token, TokenKind},
     peekable::PeekableFar,
@@ -341,16 +341,19 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             TokenKind::Literal_Integer(int) => return Ok(Expression::Constant(int)),
             TokenKind::Identifier(name) => return Ok(Expression::Variable(name)),
             TokenKind::BitwiseComplement | TokenKind::LogicalNegation | TokenKind::Minus => (),
-            _ => panic!("Error in read_factor, unknown token {:?}", token),
+            _ => return Err(CompileError::new(CompileErrorKind::InternalOrUnimplemented)),
         }
 
         //unary operator parsing
         let operator = match token {
-            TokenKind::Minus => UnaryOperator::Negation,
-            TokenKind::BitwiseComplement => UnaryOperator::BitwiseComplement,
-            TokenKind::LogicalNegation => UnaryOperator::LogicalNegation,
-            _ => panic!("Not a unary operator!"),
-        };
+            TokenKind::Minus => Ok(UnaryOperator::Negation),
+            TokenKind::BitwiseComplement => Ok(UnaryOperator::BitwiseComplement),
+            TokenKind::LogicalNegation => Ok(UnaryOperator::LogicalNegation),
+            _ => Err(CompileError::new(CompileErrorKind::ExpectedXButFoundY {
+                expected: "Unary Operator",
+                found: "temp",
+            })),
+        }?;
 
         let inner = self.read_factor()?;
 

@@ -23,6 +23,7 @@ impl fmt::Display for CompileError {
                     format!("Expected: {} but found: {} instead.", expected, found),
                 CompileErrorKind::EOFReached =>
                     "Reached End-Of-File (EOF) but expected more.".to_owned(),
+                CompileErrorKind::InternalOrUnimplemented => "Internal compiler error!".to_owned(),
             }
         )?;
 
@@ -36,4 +37,5 @@ pub enum CompileErrorKind {
         found: &'static str,
     },
     EOFReached,
+    InternalOrUnimplemented,
 }
