@@ -10,7 +10,7 @@ fn main() {
 
     let output_path = Path::new(&args[1]).with_extension("");
 
-    compile(
+    let result = compile(
         file,
         if cfg!(debug_assertions) {
             Path::new("output")
@@ -19,4 +19,10 @@ fn main() {
         },
         args[1].clone(),
     );
+
+    if let Err(err) = result {
+        println!("Compilation FAILED:\n{}", err);
+    } else {
+        println!("Compiled successfully!");
+    }
 }
