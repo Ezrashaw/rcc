@@ -14,9 +14,12 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::parser::{
-    ast::{BlockItem, Function, Program, Statement},
-    expression::{BinOperator, Expression, UnaryOperator},
+use crate::{
+    error::{CompileError, CompileErrorKind},
+    parser::{
+        ast::{BlockItem, Function, Program, Statement},
+        expression::{BinOperator, Expression, UnaryOperator},
+    },
 };
 
 pub struct Generator<'a> {
@@ -36,11 +39,11 @@ impl<'a> Generator<'a> {
         }
     }
 
-    pub fn gen_asm(mut self) -> String {
+    pub fn gen_asm(mut self) -> Result<String, CompileError> {
         for function in &self.input.0 {
-            self.write_fn_def(function);
+            self.write_fn_def(function)?;
         }
-        self.output
+        Ok(self.output)
     }
 
     fn write_fn_pre(&mut self, name: &str) {
@@ -60,7 +63,7 @@ impl<'a> Generator<'a> {
         )
     }
 
-    fn write_fn_def(&mut self, function: &'a Function) {
+    fn write_fn_def(&mut self, function: &'a Function) -> Result<(), CompileError> {
         if let Some(block) = &function.block {
             self.write_fn_pre(&function.name);
 
@@ -76,11 +79,13 @@ impl<'a> Generator<'a> {
 
             self.stack_index = -4;
 
-            self.write_block(block, &mut vars, current_scope);
+            self.write_block(block, &mut vars, current_scope)?;
 
             self.output.push_str("movl $0, %eax\n");
             self.write_fn_pro();
         }
+
+        Ok(())
     }
 
     fn write_block(
@@ -88,15 +93,17 @@ impl<'a> Generator<'a> {
         block: &'a Vec<BlockItem>,
         vars: &mut HashMap<&'a String, isize>,
         mut current_scope: HashSet<&'a String>,
-    ) {
+    ) -> Result<(), CompileError> {
         for item in block {
-            self.write_block_item(item, vars, &mut current_scope);
+            self.write_block_item(item, vars, &mut current_scope)?;
         }
 
         let bytes_to_dealloc = 4 * current_scope.len() as isize;
         self.output
             .push_str(&format!("addl ${}, %esp\n", bytes_to_dealloc));
         self.stack_index += bytes_to_dealloc;
+
+        Ok(())
     }
 
     fn write_block_item(
@@ -104,15 +111,17 @@ impl<'a> Generator<'a> {
         item: &'a BlockItem,
         vars: &mut HashMap<&'a String, isize>,
         current_scope: &mut HashSet<&'a String>,
-    ) {
+    ) -> Result<(), CompileError> {
         if let BlockItem::Statement(statement) = item {
-            self.write_statement(statement, vars, current_scope);
+            self.write_statement(statement, vars, current_scope)?;
         } else if let BlockItem::Declaration(name, exp) = item {
             if current_scope.contains(&name) {
-                panic!("Tried to declare variable twice!");
+                return Err(CompileError::new(CompileErrorKind::VariableDeclaredTwice(
+                    name.to_string(),
+                )));
             }
             if exp.is_some() {
-                self.write_expression(exp.as_ref().unwrap(), vars);
+                self.write_expression(exp.as_ref().unwrap(), vars)?;
             } else {
                 self.output.push_str("movl $0, %eax\n");
             }
@@ -121,6 +130,8 @@ impl<'a> Generator<'a> {
             current_scope.insert(name);
             self.stack_index -= 4;
         }
+
+        Ok(())
     }
 
     fn write_statement(
@@ -128,9 +139,9 @@ impl<'a> Generator<'a> {
         statement: &'a Statement,
         vars: &mut HashMap<&'a String, isize>,
         current_scope: &mut HashSet<&'a String>,
-    ) {
+    ) -> Result<(), CompileError> {
         if let Statement::Return(exp) = statement {
-            self.write_expression(exp, vars);
+            self.write_expression(exp, vars)?;
 
             let bytes_to_dealloc = 4 * current_scope.len() as isize;
             self.output
@@ -138,24 +149,30 @@ impl<'a> Generator<'a> {
 
             self.write_fn_pro();
         } else if let Statement::Expression(exp) = statement {
-            self.write_expression(exp, vars);
+            self.write_expression(exp, vars)?;
         } else if let Statement::Conditional(cntrl, state_true, state_false) = statement {
             if let Some(state_false) = state_false {
                 let state_false = Some(state_false.as_ref()); // wtf is this, we rewrap the Option????
-                self.write_conditional(cntrl, state_true, state_false, vars, current_scope);
+                self.write_conditional(cntrl, state_true, state_false, vars, current_scope)?;
             } else {
-                self.write_conditional(cntrl, state_true, None, vars, current_scope);
+                self.write_conditional(cntrl, state_true, None, vars, current_scope)?;
             }
         } else if let Statement::Compound(block) = statement {
-            self.write_block(block, &mut vars.clone(), HashSet::new());
+            self.write_block(block, &mut vars.clone(), HashSet::new())?;
         }
+
+        Ok(())
     }
 
-    fn write_expression(&mut self, exp: &'a Expression, vars: &mut HashMap<&'a String, isize>) {
-        match exp {
+    fn write_expression(
+        &mut self,
+        exp: &'a Expression,
+        vars: &mut HashMap<&'a String, isize>,
+    ) -> Result<(), CompileError> {
+        Ok(match exp {
             Expression::Constant(int) => self.output.push_str(&format!("movl ${}, %eax\n", int)),
             Expression::UnaryOp(op, exp) => {
-                self.write_expression(exp, vars);
+                self.write_expression(exp, vars)?;
                 match op {
                     UnaryOperator::Negation => self.output.push_str("neg %eax\n"),
                     UnaryOperator::BitwiseComplement => self.output.push_str("not %eax\n"),
@@ -167,19 +184,21 @@ impl<'a> Generator<'a> {
                 }
             }
             Expression::BinaryOp(op, exp1, exp2) => {
-                self.write_expression(exp1, vars);
+                self.write_expression(exp1, vars)?;
                 if op == &BinOperator::LogicalOR || op == &BinOperator::LogicalAND {
-                    self.write_logical_exp(op, exp2, vars);
-                    return;
+                    self.write_logical_exp(op, exp2, vars)?;
+                    return Ok(());
                 }
                 self.output.push_str("push %eax\n");
-                self.write_expression(exp2, vars);
+                self.write_expression(exp2, vars)?;
                 self.write_binop(op);
             }
             Expression::Assign(name, exp) => {
-                self.write_expression(exp, vars);
+                self.write_expression(exp, vars)?;
                 if !vars.contains_key(name) {
-                    panic!("undefined variable!");
+                    return Err(CompileError::new(CompileErrorKind::VariableUndefined(
+                        name.to_string(),
+                    )));
                 }
                 let offset = vars.get(name).unwrap();
                 self.output
@@ -187,18 +206,20 @@ impl<'a> Generator<'a> {
             }
             Expression::Variable(name) => {
                 if !vars.contains_key(name) {
-                    panic!("undefined variable!");
+                    return Err(CompileError::new(CompileErrorKind::VariableUndefined(
+                        name.to_string(),
+                    )));
                 }
                 let offset = vars.get(name).unwrap();
                 self.output
                     .push_str(&format!("movl {}(%ebp), %eax\n", offset));
             }
             Expression::Conditional(exp, e1, e2) => {
-                self.write_ternary_conditional(exp, e1, e2, vars)
+                self.write_ternary_conditional(exp, e1, e2, vars)?
             }
             Expression::FunCall(name, args) => {
                 for arg in args {
-                    self.write_expression(arg, vars);
+                    self.write_expression(arg, vars)?;
                     self.output.push_str("pushl %eax\n");
                 }
                 self.output.push_str(&format!("call {}\n", name));
@@ -207,7 +228,7 @@ impl<'a> Generator<'a> {
                 self.output
                     .push_str(&format!("addl ${}, %esp\n", bytes_to_remove));
             }
-        }
+        })
     }
 
     fn write_ternary_conditional(
@@ -216,23 +237,25 @@ impl<'a> Generator<'a> {
         e1: &'a Expression,
         e2: &'a Expression,
         vars: &mut HashMap<&'a String, isize>,
-    ) {
+    ) -> Result<(), CompileError> {
         let start_id = self.label_id;
         self.label_id += 2;
 
-        self.write_expression(cntrl, vars);
+        self.write_expression(cntrl, vars)?;
         self.output.push_str(&format!(
             "cmpl $0, %eax\n\
             je _{start_id}\n"
         ));
-        self.write_expression(e1, vars);
+        self.write_expression(e1, vars)?;
         self.output.push_str(&format!(
             "jmp _{}\n\
             _{start_id}:\n",
             start_id + 1
         ));
-        self.write_expression(e2, vars);
+        self.write_expression(e2, vars)?;
         self.output.push_str(&format!("_{}:\n", start_id + 1));
+
+        Ok(())
     }
 
     fn write_conditional(
@@ -242,24 +265,24 @@ impl<'a> Generator<'a> {
         state_false: Option<&'a Statement>,
         vars: &mut HashMap<&'a String, isize>,
         current_scope: &mut HashSet<&'a String>,
-    ) {
+    ) -> Result<(), CompileError> {
         let start_id = self.label_id;
         self.label_id += if state_false.is_some() { 2 } else { 1 };
 
-        self.write_expression(cntrl, vars);
+        self.write_expression(cntrl, vars)?;
         if let Some(state_false) = state_false {
             self.output.push_str(&format!(
                 "cmpl $0, %eax\n\
                 je _{start_id}\n"
             ));
 
-            self.write_statement(state_true, vars, current_scope);
+            self.write_statement(state_true, vars, current_scope)?;
             self.output.push_str(&format!(
                 "jmp _{}\n\
                 _{start_id}:\n",
                 start_id + 1
             ));
-            self.write_statement(state_false, vars, current_scope);
+            self.write_statement(state_false, vars, current_scope)?;
 
             self.output.push_str(&format!("_{}:\n", start_id + 1));
         } else {
@@ -268,10 +291,12 @@ impl<'a> Generator<'a> {
                 je _{start_id}\n"
             ));
 
-            self.write_statement(state_true, vars, current_scope);
+            self.write_statement(state_true, vars, current_scope)?;
 
             self.output.push_str(&format!("_{}:\n", start_id));
         }
+
+        Ok(())
     }
 
     fn write_binop(&mut self, op: &BinOperator) {
@@ -327,7 +352,7 @@ impl<'a> Generator<'a> {
         op: &'a BinOperator,
         exp: &'a Expression,
         vars: &mut HashMap<&'a String, isize>,
-    ) {
+    ) -> Result<(), CompileError> {
         let id_clause2 = self.label_id;
         let id_end = id_clause2 + 1;
         self.label_id += 2;
@@ -340,7 +365,7 @@ impl<'a> Generator<'a> {
                 _{id_clause2}:\n"
             ));
 
-            self.write_expression(exp, vars);
+            self.write_expression(exp, vars)?;
             self.output.push_str(&format!(
                 "cmpl $0, %eax\n\
                 movl $0, %eax\n\
@@ -355,7 +380,7 @@ impl<'a> Generator<'a> {
                 _{id_clause2}:\n"
             ));
 
-            self.write_expression(exp, vars);
+            self.write_expression(exp, vars)?;
             self.output.push_str(&format!(
                 "cmpl $0, %eax\n\
                 movl $0, %eax\n\
@@ -363,5 +388,7 @@ impl<'a> Generator<'a> {
                 _{id_end}:\n"
             ));
         }
+
+        Ok(())
     }
 }

@@ -49,7 +49,7 @@ pub fn compile(
     }
 
     let generator = Generator::new(&ast);
-    let asm = generator.gen_asm();
+    let asm = generator.gen_asm()?;
 
     if debug {
         println!("=====ASM=====");

@@ -36,7 +36,9 @@ fn compile(path: &Path) -> Result<(), rcc::error::CompileError> {
         false,
     )?; // TODO: temporary name for test file passed to compiler
 
-    fs::remove_file(Path::new("output")).unwrap();
+    fs::remove_file(Path::new("output")); 
+    // TODO: this can panic IF: rcc thinks its compiled, but linking fails. 
+    //This causes rcc to report a Ok(()) when Err(Linking) should be reported instead
 
     Ok(())
 }

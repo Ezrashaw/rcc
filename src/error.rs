@@ -18,12 +18,16 @@ impl fmt::Display for CompileError {
         writeln!(
             f,
             "{}",
-            match self.kind {
+            match &self.kind {
                 CompileErrorKind::ExpectedXButFoundY { expected, found } =>
                     format!("Expected: {} but found: {} instead.", expected, found),
                 CompileErrorKind::EOFReached =>
                     "Reached End-Of-File (EOF) but expected more.".to_owned(),
                 CompileErrorKind::InternalOrUnimplemented => "Internal compiler error!".to_owned(),
+                CompileErrorKind::VariableDeclaredTwice(name) =>
+                    format!("Variable \'{}\' was declared twice!", name).to_owned(),
+                CompileErrorKind::VariableUndefined(name) =>
+                    format!("Variable \'{}\' hasn't been defined!", name).to_owned(),
             }
         )?;
 
@@ -37,5 +41,7 @@ pub enum CompileErrorKind {
         found: &'static str,
     },
     EOFReached,
+    VariableDeclaredTwice(String),
+    VariableUndefined(String),
     InternalOrUnimplemented,
 }
