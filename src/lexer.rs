@@ -1,4 +1,4 @@
-use self::token::{Keyword, Literal, Token, TokenData};
+use self::token::{Token, TokenKind};
 use crate::ctypes::CType;
 
 pub mod token;
@@ -64,7 +64,7 @@ impl<'a> Lexer<'a> {
         Token::new(kind, self.file_name.clone(), line, column) // TODO: `.clone()` AAAAARRGGHHH!!!!
     }
 
-    fn read_tokenkind(&mut self) -> TokenData {
+    fn read_tokenkind(&mut self) -> TokenKind {
         // read a single char that we will match against
         let ch = self.read_char();
 
@@ -75,25 +75,25 @@ impl<'a> Lexer<'a> {
             // keyword matching
             // TODO: make this system smarter (we could automatically do this, maybe with 'build.rs')
             let keyword = match str.as_str() {
-                "return" => Some(Keyword::Return),
-                "int" => Some(Keyword::DataType(CType::Integer)),
-                "if" => Some(Keyword::If),
-                "else" => Some(Keyword::Else),
-                "for" => Some(Keyword::For),
-                "while" => Some(Keyword::While),
-                "do" => Some(Keyword::Do),
-                "break" => Some(Keyword::Break),
-                "continue" => Some(Keyword::Continue),
+                "return" => Some(TokenKind::Keyword_Return),
+                "int" => Some(TokenKind::Keyword_DataType(CType::Integer)),
+                "if" => Some(TokenKind::Keyword_If),
+                "else" => Some(TokenKind::Keyword_Else),
+                "for" => Some(TokenKind::Keyword_For),
+                "while" => Some(TokenKind::Keyword_While),
+                "do" => Some(TokenKind::Keyword_Do),
+                "break" => Some(TokenKind::Keyword_Break),
+                "continue" => Some(TokenKind::Keyword_Continue),
                 _ => None,
             };
 
             // return the tokenized keyword
             if let Some(keyword) = keyword {
-                return TokenData::Keyword(keyword);
+                return keyword;
             }
 
             // or return an identifier
-            return TokenData::Identifier(str);
+            return TokenKind::Identifier(str);
         }
 
         // matching integer literals
@@ -101,24 +101,24 @@ impl<'a> Lexer<'a> {
             let literal = self.read_complex(|ch| ch.is_ascii_digit());
 
             // parse and return literal
-            return TokenData::Literal(Literal::Integer(literal.parse().unwrap()));
+            return TokenKind::Literal_Integer(literal.parse().unwrap());
             // TODO: fail on integers that exceed i32::MAX
         }
 
         let double_char: String = String::from_iter([ch, self.peek_char()]);
         // matching multi-char tokens
         let multi_char = match double_char.as_str() {
-            "&&" => TokenData::And,
-            "||" => TokenData::Or,
-            "==" => TokenData::Equal,
-            "!=" => TokenData::NotEqual,
-            "<=" => TokenData::LessThanEqual,
-            ">=" => TokenData::GreaterThanEqual,
-            _ => TokenData::Illegal,
+            "&&" => TokenKind::And,
+            "||" => TokenKind::Or,
+            "==" => TokenKind::Equal,
+            "!=" => TokenKind::NotEqual,
+            "<=" => TokenKind::LessThanEqual,
+            ">=" => TokenKind::GreaterThanEqual,
+            _ => TokenKind::Illegal,
         };
 
         // return multi-char token if it exists
-        if multi_char != TokenData::Illegal {
+        if multi_char != TokenKind::Illegal {
             self.read_char();
             return multi_char;
         }
@@ -126,24 +126,24 @@ impl<'a> Lexer<'a> {
         // matching single character tokens
         // TODO: make this better, maybe with 'build.rs'
         match ch {
-            '{' => TokenData::OpenBrace,
-            '}' => TokenData::CloseBrace,
-            '(' => TokenData::OpenParen,
-            ')' => TokenData::CloseParen,
-            ';' => TokenData::Semicolon,
-            '-' => TokenData::Minus,
-            '~' => TokenData::BitwiseComplement,
-            '!' => TokenData::LogicalNegation,
-            '+' => TokenData::Addition,
-            '*' => TokenData::Multiplication,
-            '/' => TokenData::Division,
-            '<' => TokenData::LessThan,
-            '>' => TokenData::GreaterThan,
-            '=' => TokenData::Assignment,
-            ':' => TokenData::Colon,
-            '?' => TokenData::QuestionMark,
-            ',' => TokenData::Comma,
-            _ => TokenData::Illegal,
+            '{' => TokenKind::OpenBrace,
+            '}' => TokenKind::CloseBrace,
+            '(' => TokenKind::OpenParen,
+            ')' => TokenKind::CloseParen,
+            ';' => TokenKind::Semicolon,
+            '-' => TokenKind::Minus,
+            '~' => TokenKind::BitwiseComplement,
+            '!' => TokenKind::LogicalNegation,
+            '+' => TokenKind::Addition,
+            '*' => TokenKind::Multiplication,
+            '/' => TokenKind::Division,
+            '<' => TokenKind::LessThan,
+            '>' => TokenKind::GreaterThan,
+            '=' => TokenKind::Assignment,
+            ':' => TokenKind::Colon,
+            '?' => TokenKind::QuestionMark,
+            ',' => TokenKind::Comma,
+            _ => TokenKind::Illegal,
         }
     }
 
@@ -175,7 +175,7 @@ impl Iterator for Lexer<'_> {
         let token = self.read_token();
 
         // check whether we have reached EOF
-        if token.data == TokenData::Illegal {
+        if token.kind == TokenKind::Illegal {
             None
         } else {
             Some(token)

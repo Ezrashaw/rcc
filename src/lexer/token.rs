@@ -2,7 +2,7 @@ use crate::ctypes::{CInteger, CType};
 
 #[derive(Debug)]
 pub struct Token {
-    pub data: TokenData,
+    pub kind: TokenKind,
 
     pub file: String, // TODO: make this a path
     pub line: u32,
@@ -10,9 +10,9 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new(data: TokenData, file: String, line: u32, column: u32) -> Self {
+    pub fn new(kind: TokenKind, file: String, line: u32, column: u32) -> Self {
         Self {
-            data,
+            kind,
             file,
             line,
             column,
@@ -21,8 +21,9 @@ impl Token {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TokenData {
-    Illegal,
+#[allow(non_camel_case_types)]
+pub enum TokenKind {
+    Illegal, // TODO: marked for deletion
     OpenBrace,
     CloseBrace,
     OpenParen,
@@ -53,27 +54,17 @@ pub enum TokenData {
 
     Comma,
 
-    Keyword(Keyword),
+    Keyword_Return,
+    Keyword_DataType(CType),
+    Keyword_If,
+    Keyword_Else,
+    Keyword_For,
+    Keyword_While,
+    Keyword_Do,
+    Keyword_Break,
+    Keyword_Continue,
+
+    Literal_Integer(CInteger),
+
     Identifier(String),
-    Literal(Literal),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Keyword {
-    Return,
-    DataType(CType),
-
-    If,
-    Else,
-
-    For,
-    While,
-    Do,
-    Break,
-    Continue,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Literal {
-    Integer(CInteger),
 }

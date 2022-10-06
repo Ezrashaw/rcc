@@ -1,6 +1,6 @@
 use crate::{
-    ctypes::CType,
-    lexer::token::{Keyword, Literal, Token, TokenData},
+    expect_token, expect_token_soft,
+    lexer::token::{Token, TokenKind},
     peekable::PeekableFar,
 };
 
@@ -11,6 +11,7 @@ use self::{
 
 pub mod ast;
 pub mod expression;
+mod helpers;
 
 pub struct Parser<T: Iterator<Item = Token>> {
     input: PeekableFar<T>,
@@ -33,51 +34,21 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         Program(functions)
     }
 
-    fn read_token(&mut self) -> TokenData {
-        self.input.next().unwrap().data
-    }
-
-    fn peek_token(&mut self) -> &TokenData {
-        &self.input.peek().unwrap().data // TODO: merge with `peek_far_token`?
-    }
-
-    fn peek_far_token(&mut self, d: usize) -> &TokenData {
-        &self.input.peek_far(d).unwrap().data
-    }
-
-    fn read_ident(&mut self) -> String {
-        if let TokenData::Identifier(ident) = self.read_token() {
-            ident
-        } else {
-            panic!("Expected identifer but found");
-        }
-    }
-
-    fn read_type(&mut self) -> CType {
-        if let TokenData::Keyword(Keyword::DataType(data_type)) = self.read_token() {
-            data_type
-        } else {
-            panic!("Expected type but found");
-        }
-    }
-
     fn read_args(&mut self) -> Vec<String> {
-        if self.read_token() != TokenData::OpenParen {
-            panic!("No opening argument paren!")
-        }
+        expect_token!(self, TokenKind::OpenParen);
+
         let mut args = Vec::new();
 
-        if self.peek_token() != &TokenData::CloseParen {
+        if self.peek_token() != &TokenKind::CloseParen {
             self.read_type();
-            args.push(self.read_ident());
+            args.push(self.read_identifier());
         }
 
-        while self.peek_token() != &TokenData::CloseParen {
-            if self.read_token() != TokenData::Comma {
-                panic!("expected comma!")
-            }
+        while self.peek_token() != &TokenKind::CloseParen {
+            expect_token!(self, TokenKind::Comma);
+
             self.read_type();
-            args.push(self.read_ident());
+            args.push(self.read_identifier());
         }
 
         self.read_token();
@@ -86,13 +57,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
 
     fn read_function(&mut self) -> Function {
         let return_type = self.read_type();
-        let name = self.read_ident();
+        let name = self.read_identifier();
         let parameters = self.read_args();
 
-        let block = if self.peek_token() == &TokenData::Semicolon {
-            self.read_token();
+        let block = if expect_token_soft!(self, TokenKind::Semicolon) {
             None
         } else {
+            expect_token!(self, TokenKind::OpenBrace);
             Some(self.read_block())
         };
 
@@ -107,13 +78,8 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn read_block(&mut self) -> Vec<BlockItem> {
         let mut block = vec![];
 
-        if self.read_token() != TokenData::OpenBrace {
-            panic!("No opening block brace!")
-        }
-
         loop {
-            if self.peek_token() == &TokenData::CloseBrace {
-                self.read_token();
+            if expect_token_soft!(self, TokenKind::CloseBrace) {
                 break;
             }
 
@@ -124,20 +90,17 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn read_block_item(&mut self) -> BlockItem {
-        let item = if let TokenData::Keyword(Keyword::DataType(_)) = self.peek_token() {
-            self.read_token(); // ctype
-            let name = self.read_ident();
+        let item = if expect_token_soft!(self, TokenKind::Keyword_DataType(_)) {
+            let name = self.read_identifier();
             let assign = self.peek_token();
-            let decl = if assign == &TokenData::Assignment {
+            let decl = if assign == &TokenKind::Assignment {
                 self.read_token();
                 BlockItem::Declaration(name, Some(self.read_expression()))
             } else {
                 BlockItem::Declaration(name, None)
             };
 
-            if self.read_token() != TokenData::Semicolon {
-                panic!("Missing semicolon!");
-            }
+            expect_token!(self, TokenKind::Semicolon);
 
             decl
         } else {
@@ -148,46 +111,29 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     }
 
     fn read_statement(&mut self) -> Statement {
-        let token = self.peek_token();
+        let statement = if expect_token_soft!(self, TokenKind::Keyword_Return) {
+            Statement::Return(self.read_expression())
+        } else if expect_token_soft!(self, TokenKind::Keyword_If) {
+            expect_token!(self, TokenKind::OpenParen);
 
-        let statement = if let TokenData::Keyword(keyword) = token {
-            if keyword == &Keyword::Return {
-                self.read_token();
-                let exp = self.read_expression();
+            let controlling = self.read_expression();
 
-                Statement::Return(exp)
-            } else if keyword == &Keyword::If {
-                self.read_token();
+            expect_token!(self, TokenKind::CloseParen);
 
-                if self.read_token() != TokenData::OpenParen {
-                    panic!("Exprected open bracket!")
-                }
+            let statement_true = self.read_statement();
 
-                let controlling = self.read_expression();
+            if expect_token_soft!(self, TokenKind::Keyword_Else) {
+                let statement_false = self.read_statement();
 
-                if self.read_token() != TokenData::CloseParen {
-                    panic!("Exprected closing bracket!")
-                }
-
-                let statement_true = self.read_statement();
-
-                if self.peek_token() == &TokenData::Keyword(Keyword::Else) {
-                    self.read_token();
-
-                    let statement_false = self.read_statement();
-
-                    Statement::Conditional(
-                        controlling,
-                        Box::new(statement_true),
-                        Some(Box::new(statement_false)),
-                    )
-                } else {
-                    Statement::Conditional(controlling, Box::new(statement_true), None)
-                }
+                Statement::Conditional(
+                    controlling,
+                    Box::new(statement_true),
+                    Some(Box::new(statement_false)),
+                )
             } else {
-                panic!("Unknown keyword in statement!")
+                Statement::Conditional(controlling, Box::new(statement_true), None)
             }
-        } else if let TokenData::OpenBrace = token {
+        } else if expect_token_soft!(self, TokenKind::OpenBrace) {
             Statement::Compound(self.read_block())
         } else {
             Statement::Expression(self.read_expression())
@@ -200,9 +146,7 @@ impl<T: Iterator<Item = Token>> Parser<T> {
             return statement;
         }
 
-        if self.read_token() != TokenData::Semicolon {
-            panic!("Expected semicolon!");
-        }
+        expect_token!(self, TokenKind::Semicolon);
 
         statement
     }
@@ -210,18 +154,13 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn read_expression(&mut self) -> Expression {
         let token = self.peek_far_token(2);
 
-        if let TokenData::Assignment = token {
-            let ident = self.read_token();
-            if let TokenData::Identifier(name) = ident {
-                let name = name; // TODO: we shouldn't clone identifiers like this, or at all!
-                self.read_token(); // assignment
+        if let TokenKind::Assignment = token {
+            let ident = self.read_identifier();
+            self.read_token(); // assignment
 
-                let exp = self.read_expression();
+            let exp = self.read_expression();
 
-                return Expression::Assign(name, Box::new(exp));
-            } else {
-                panic!("Expected identifier! {:?}", ident);
-            }
+            return Expression::Assign(ident, Box::new(exp));
         }
 
         self.read_conditional_exp()
@@ -230,13 +169,11 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn read_conditional_exp(&mut self) -> Expression {
         let exp = self.read_logical_or_exp();
 
-        if self.peek_token() == &TokenData::QuestionMark {
+        if self.peek_token() == &TokenKind::QuestionMark {
             self.read_token();
 
             let e1 = self.read_expression();
-            if self.read_token() != TokenData::Colon {
-                panic!("expected colon in ternary conditional!");
-            }
+            expect_token!(self, TokenKind::Colon);
             let e2 = self.read_conditional_exp();
 
             Expression::Conditional(Box::new(exp), Box::new(e1), Box::new(e2))
@@ -249,9 +186,9 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let mut exp = self.read_logical_and_exp();
 
         let mut next_token = self.peek_token();
-        while next_token == &TokenData::Or {
+        while next_token == &TokenKind::Or {
             let op = match self.read_token() {
-                TokenData::Or => BinOperator::LogicalOR,
+                TokenKind::Or => BinOperator::LogicalOR,
                 _ => panic!("Unknown token in read_expression"),
             };
 
@@ -268,9 +205,9 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let mut exp = self.read_equality_exp();
 
         let mut next_token = self.peek_token();
-        while next_token == &TokenData::And {
+        while next_token == &TokenKind::And {
             let op = match self.read_token() {
-                TokenData::And => BinOperator::LogicalAND,
+                TokenKind::And => BinOperator::LogicalAND,
                 _ => panic!("Unknown token in read_logical_and_expression"),
             };
 
@@ -287,10 +224,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let mut exp = self.read_relational_exp();
 
         let mut next_token = self.peek_token();
-        while next_token == &TokenData::Equal || next_token == &TokenData::NotEqual {
+        while next_token == &TokenKind::Equal || next_token == &TokenKind::NotEqual {
             let op = match self.read_token() {
-                TokenData::Equal => BinOperator::Equal,
-                TokenData::NotEqual => BinOperator::NotEqual,
+                TokenKind::Equal => BinOperator::Equal,
+                TokenKind::NotEqual => BinOperator::NotEqual,
                 _ => panic!("Unknown token in read_equality_expression"),
             };
 
@@ -307,16 +244,16 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let mut exp = self.read_additive_exp();
 
         let mut next_token = self.peek_token();
-        while next_token == &TokenData::LessThan
-            || next_token == &TokenData::LessThanEqual
-            || next_token == &TokenData::GreaterThan
-            || next_token == &TokenData::GreaterThanEqual
+        while next_token == &TokenKind::LessThan
+            || next_token == &TokenKind::LessThanEqual
+            || next_token == &TokenKind::GreaterThan
+            || next_token == &TokenKind::GreaterThanEqual
         {
             let op = match self.read_token() {
-                TokenData::LessThan => BinOperator::LessThan,
-                TokenData::LessThanEqual => BinOperator::LessThanOrEqual,
-                TokenData::GreaterThan => BinOperator::GreaterThan,
-                TokenData::GreaterThanEqual => BinOperator::GreaterThanOrEqual,
+                TokenKind::LessThan => BinOperator::LessThan,
+                TokenKind::LessThanEqual => BinOperator::LessThanOrEqual,
+                TokenKind::GreaterThan => BinOperator::GreaterThan,
+                TokenKind::GreaterThanEqual => BinOperator::GreaterThanOrEqual,
                 _ => panic!("Unknown token in read_relational_expression"),
             };
 
@@ -333,10 +270,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let mut term = self.read_term();
 
         let mut next_token = self.peek_token();
-        while next_token == &TokenData::Addition || next_token == &TokenData::Minus {
+        while next_token == &TokenKind::Addition || next_token == &TokenKind::Minus {
             let op = match self.read_token() {
-                TokenData::Addition => BinOperator::Addition,
-                TokenData::Minus => BinOperator::Subtraction,
+                TokenKind::Addition => BinOperator::Addition,
+                TokenKind::Minus => BinOperator::Subtraction,
                 _ => panic!("Unknown token in read_additive_expression"),
             };
 
@@ -353,10 +290,10 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         let mut factor = self.read_factor();
 
         let mut next_token = self.peek_token();
-        while next_token == &TokenData::Multiplication || next_token == &TokenData::Division {
+        while next_token == &TokenKind::Multiplication || next_token == &TokenKind::Division {
             let op = match self.read_token() {
-                TokenData::Multiplication => BinOperator::Multiplication,
-                TokenData::Division => BinOperator::Division,
+                TokenKind::Multiplication => BinOperator::Multiplication,
+                TokenKind::Division => BinOperator::Division,
                 _ => panic!("Unknown token in read_term"),
             };
 
@@ -372,17 +309,15 @@ impl<T: Iterator<Item = Token>> Parser<T> {
     fn read_factor(&mut self) -> Expression {
         let token = self.read_token();
 
-        if let TokenData::Identifier(ref name) = token {
-            if self.peek_token() == &TokenData::OpenParen {
-                self.read_token();
+        if let TokenKind::Identifier(ref name) = token {
+            if expect_token_soft!(self, TokenKind::OpenParen) {
                 let mut args = Vec::new();
-                if self.peek_token() != &TokenData::CloseParen {
+                if self.peek_token() != &TokenKind::CloseParen {
                     args.push(self.read_expression());
                 }
-                while self.peek_token() != &TokenData::CloseParen {
-                    if self.read_token() != TokenData::Comma {
-                        panic!("Expected comma!");
-                    }
+                while self.peek_token() != &TokenKind::CloseParen {
+                    expect_token!(self, TokenKind::Comma);
+
                     args.push(self.read_expression());
                 }
                 self.read_token();
@@ -391,25 +326,23 @@ impl<T: Iterator<Item = Token>> Parser<T> {
         }
 
         match token {
-            TokenData::OpenParen => {
+            TokenKind::OpenParen => {
                 let exp = self.read_expression();
-                if self.read_token() != TokenData::CloseParen {
-                    panic!("Expected close paren!");
-                }
+                expect_token!(self, TokenKind::CloseParen);
+
                 return exp;
             }
-            TokenData::Literal(Literal::Integer(int)) => return Expression::Constant(int),
-            TokenData::Identifier(name) => return Expression::Variable(name),
-            TokenData::BitwiseComplement | TokenData::LogicalNegation | TokenData::Minus => (),
+            TokenKind::Literal_Integer(int) => return Expression::Constant(int),
+            TokenKind::Identifier(name) => return Expression::Variable(name),
+            TokenKind::BitwiseComplement | TokenKind::LogicalNegation | TokenKind::Minus => (),
             _ => panic!("Error in read_factor, unknown token {:?}", token),
         }
 
         //unary operator parsing
-
         let operator = match token {
-            TokenData::Minus => UnaryOperator::Negation,
-            TokenData::BitwiseComplement => UnaryOperator::BitwiseComplement,
-            TokenData::LogicalNegation => UnaryOperator::LogicalNegation,
+            TokenKind::Minus => UnaryOperator::Negation,
+            TokenKind::BitwiseComplement => UnaryOperator::BitwiseComplement,
+            TokenKind::LogicalNegation => UnaryOperator::LogicalNegation,
             _ => panic!("Not a unary operator!"),
         };
 
