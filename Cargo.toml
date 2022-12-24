@@ -6,3 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+env_logger = { git = "https://github.com/Ezrashaw/env_logger", version = "0.10.0", branch = "timestamp_revamp" }
+log = "0.4.17"

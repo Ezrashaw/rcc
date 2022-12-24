@@ -1,0 +1,9 @@
+Ident("int") at 0..3
+Ident("main") at 4..8
+OpenParen at 8..9
+CloseParen at 9..10
+OpenBrace at 11..12
+Ident("return") at 17..23
+IntLiteral(2) at 24..25
+Semicolon at 25..26
+EOF at 28..28
