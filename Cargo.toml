@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "rcc_lexer",
+    "rcc_span",
+    "rcc_error",
+    "rcc_parser",
+    "rcc_bytecode",
+    "rcc_backend_x86",
+    "rcc_main"
+]
