@@ -1,12 +1,13 @@
 #![feature(let_chains)]
 #![feature(is_some_and)]
+#![feature(if_let_guard)]
 
 use self::ast::{Expression, Program, Statement};
 
 pub mod ast;
 pub mod pretty_printer;
 
-use ast::Function;
+use ast::{Function, UnaryOp};
 use peekmore::{PeekMore, PeekMoreIterator};
 use rcc_error::SpannedError;
 use rcc_lexer::{Keyword, Token, TokenKind};
@@ -84,11 +85,31 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
     fn parse_expression(&mut self) -> Expression {
         let tok = self.input.next();
-        let Some(TokenKind::Literal(val)) = tok.as_ref().map(|t| &t.kind) else {
-            self.emit_err_from_token("<int>", tok)
-        };
 
-        Expression::Literal { val: *val }
+        match tok.as_ref().map(|t| &t.kind) {
+            Some(TokenKind::Literal(val)) => Expression::Literal { val: *val },
+
+            Some(tok) if let Some(unary) = Self::unary_op_from_tok(tok)
+                => Expression::UnaryOp { expr: Box::new(self.parse_expression()), op: unary },
+
+            _ => self.emit_err_from_token("<expresion>", tok),
+        }
+
+        // let Some(TokenKind::Literal(val)) = tok.as_ref().map(|t| &t.kind) else {
+        //     self.emit_err_from_token("<int>", tok)
+        // };
+
+        // Expression::Literal { val: *val }
+    }
+
+    fn unary_op_from_tok(kind: &TokenKind) -> Option<UnaryOp> {
+        match kind {
+            TokenKind::Minus => Some(UnaryOp::Negation),
+            TokenKind::Tilde => Some(UnaryOp::BitwiseComplement),
+            TokenKind::Exclamation => Some(UnaryOp::LogicalNegation),
+
+            _ => None,
+        }
     }
 
     // fn parse_operand(&mut self) -> Box<Expression> {

@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use crate::ast::Function;
+use crate::ast::{Function, UnaryOp};
 
 use super::ast::{Expression, Program, Statement};
 
@@ -46,6 +46,19 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
     fn print_expr(&mut self, expr: &Expression) -> io::Result<()> {
         match expr {
             Expression::Literal { val } => write!(self.buf, "{val}"),
+            Expression::UnaryOp { expr, op } => {
+                write!(
+                    self.buf,
+                    "{}",
+                    match op {
+                        UnaryOp::Negation => "-",
+                        UnaryOp::BitwiseComplement => "~",
+                        UnaryOp::LogicalNegation => "!",
+                    }
+                )?;
+
+                self.print_expr(expr)
+            }
         }
     }
 }

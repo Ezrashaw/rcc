@@ -27,6 +27,7 @@ impl Instruction {
     fn from_expression(buf: &mut Vec<Self>, expression: &Expression) {
         match expression {
             Expression::Literal { val } => buf.push(Instruction::LoadInt(*val)),
+            Expression::UnaryOp { expr, op } => todo!(),
         }
     }
 }

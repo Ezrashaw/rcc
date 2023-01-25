@@ -29,9 +29,17 @@ pub enum Expression {
     //     op: BinOp,
     // },
     Literal { val: u32 },
+    UnaryOp { expr: Box<Expression>, op: UnaryOp },
     // Variable {
     //     id: u32,
     // },
+}
+
+#[derive(Debug)]
+pub enum UnaryOp {
+    Negation,
+    BitwiseComplement,
+    LogicalNegation,
 }
 
 // #[derive(Debug)]
