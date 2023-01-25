@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use crate::ast::{Function, UnaryOp};
+use crate::ast::{BinOp, Function, UnaryOp};
 
 use super::ast::{Expression, Program, Statement};
 
@@ -58,6 +58,35 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
                 )?;
 
                 self.print_expr(expr)
+            }
+            Expression::BinOp {
+                has_parens,
+                lhs,
+                rhs,
+                op,
+            } => {
+                if *has_parens {
+                    write!(self.buf, "(")?;
+                }
+
+                self.print_expr(lhs)?;
+                write!(
+                    self.buf,
+                    " {} ",
+                    match op {
+                        BinOp::Add => '+',
+                        BinOp::Sub => '-',
+                        BinOp::Mul => '*',
+                        BinOp::Div => '/',
+                    }
+                )?;
+                self.print_expr(rhs)?;
+
+                if *has_parens {
+                    write!(self.buf, ")")?;
+                }
+
+                Ok(())
             }
         }
     }

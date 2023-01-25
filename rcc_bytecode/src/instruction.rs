@@ -33,6 +33,12 @@ impl Instruction {
         match expression {
             Expression::Literal { val } => buf.push(Instruction::LoadInt(*val)),
             Expression::UnaryOp { expr, op } => Self::from_unary_op(buf, expr, op),
+            Expression::BinOp {
+                has_parens,
+                lhs,
+                rhs,
+                op,
+            } => todo!(),
         }
     }
 

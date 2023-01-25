@@ -22,14 +22,19 @@ pub enum Statement {
 
 #[derive(Debug)]
 pub enum Expression {
-    // BinOp {
-    //     has_parens: bool,
-    //     lhs: Box<Expression>,
-    //     rhs: Box<Expression>,
-    //     op: BinOp,
-    // },
-    Literal { val: u32 },
-    UnaryOp { expr: Box<Expression>, op: UnaryOp },
+    BinOp {
+        has_parens: bool,
+        lhs: Box<Expression>,
+        rhs: Box<Expression>,
+        op: BinOp,
+    },
+    UnaryOp {
+        expr: Box<Expression>,
+        op: UnaryOp,
+    },
+    Literal {
+        val: u32,
+    },
     // Variable {
     //     id: u32,
     // },
@@ -42,10 +47,10 @@ pub enum UnaryOp {
     LogicalNegation,
 }
 
-// #[derive(Debug)]
-// pub enum BinOp {
-//     Add,
-//     Sub,
-//     Mul,
-//     Div,
-// }
+#[derive(Debug)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+}

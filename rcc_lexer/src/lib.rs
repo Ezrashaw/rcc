@@ -24,6 +24,9 @@ pub enum TokenKind<'a> {
     Minus,
     Tilde,
     Exclamation,
+    Plus,
+    Star,
+    Slash,
 
     // complex
     Literal(u32),
@@ -52,6 +55,9 @@ single_char_tokens! {
     '-' => TokenKind::Minus,
     '~' => TokenKind::Tilde,
     '!' => TokenKind::Exclamation,
+    '+' => TokenKind::Plus,
+    '*' => TokenKind::Star,
+    '/' => TokenKind::Slash,
 }
 
 multi_char_tokens! {
