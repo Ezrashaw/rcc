@@ -13,16 +13,22 @@ use rcc_span::Span;
 /// Defines all the tokens that can occur in a valid `C` program. Holds a reference to the input string for identifiers.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind<'a> {
+    // general syntax
     OpenBrace,
     CloseBrace,
     OpenParen,
     CloseParen,
     Semicolon,
 
-    Keyword(Keyword),
+    // operators
+    Minus,
+    Tilde,
+    Exclamation,
 
+    // complex
     Literal(u32),
     Ident(&'a str),
+    Keyword(Keyword),
 }
 
 /// Defines keywords (including builtin types) as defined by `C`.
@@ -35,11 +41,17 @@ pub enum Keyword {
 }
 
 single_char_tokens! {
+    // general syntax
     '{' => TokenKind::OpenBrace,
     '}' => TokenKind::CloseBrace,
     '(' => TokenKind::OpenParen,
     ')' => TokenKind::CloseParen,
     ';' => TokenKind::Semicolon,
+
+    // operators
+    '-' => TokenKind::Minus,
+    '~' => TokenKind::Tilde,
+    '!' => TokenKind::Exclamation,
 }
 
 multi_char_tokens! {
