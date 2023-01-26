@@ -1,3 +1,5 @@
+use rcc_structures::{BinOp, UnaryOp};
+
 #[derive(Debug)]
 pub struct Program<'a> {
     pub function: Function<'a>,
@@ -38,28 +40,4 @@ pub enum Expression {
     // Variable {
     //     id: u32,
     // },
-}
-
-#[derive(Debug)]
-pub enum UnaryOp {
-    Negation,
-    BitwiseComplement,
-    LogicalNegation,
-}
-
-#[derive(Debug)]
-pub enum BinOp {
-    Add,
-    Sub,
-    Mul,
-    Div,
-
-    LogicalOr,
-    LogicalAnd,
-    Equals,
-    NotEquals,
-    LessThan,
-    LessThanOrEquals,
-    GreaterThan,
-    GreaterThanOrEquals,
 }

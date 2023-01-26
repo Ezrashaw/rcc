@@ -7,10 +7,11 @@ use self::ast::{Expression, Program, Statement};
 pub mod ast;
 pub mod pretty_printer;
 
-use ast::{BinOp, Function, UnaryOp};
+use ast::Function;
 use peekmore::{PeekMore, PeekMoreIterator};
 use rcc_error::SpannedError;
 use rcc_lexer::{Keyword, Token, TokenKind};
+use rcc_structures::{BinOp, UnaryOp};
 
 /// A parser for the `C` programming language.
 ///
@@ -124,7 +125,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 macro_rules! impl_binop {
     ({$( $lvl:literal = $match:pat, )+}; {$($token:pat => $op:expr,)*} ) => {
         impl<'a, I: ::std::iter::Iterator<Item = ::rcc_lexer::Token<'a>>> crate::Parser<'a, I> {
-            fn map_tok_to_op(tok: ::rcc_lexer::TokenKind) -> Option<crate::ast::BinOp> {
+            fn map_tok_to_op(tok: ::rcc_lexer::TokenKind) -> Option<::rcc_structures::BinOp> {
                 match tok {
                     $($token => Some($op),)*
                     _ => None

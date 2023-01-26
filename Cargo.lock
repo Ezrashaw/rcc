@@ -13,6 +13,7 @@ name = "rcc_backend_x86"
 version = "0.0.0"
 dependencies = [
  "rcc_bytecode",
+ "rcc_structures",
 ]
 
 [[package]]
@@ -20,6 +21,7 @@ name = "rcc_bytecode"
 version = "0.0.0"
 dependencies = [
  "rcc_parser",
+ "rcc_structures",
 ]
 
 [[package]]
@@ -55,10 +57,15 @@ dependencies = [
  "peekmore",
  "rcc_error",
  "rcc_lexer",
+ "rcc_structures",
 ]
 
 [[package]]
 name = "rcc_span"
+version = "0.0.0"
+
+[[package]]
+name = "rcc_structures"
 version = "0.0.0"
 
 [[package]]

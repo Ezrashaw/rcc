@@ -1,4 +1,5 @@
-use rcc_parser::ast::{BinOp, Expression, Function, Statement, UnaryOp};
+use rcc_parser::ast::{Expression, Function, Statement};
+use rcc_structures::{BinOp, UnaryOp};
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
@@ -15,15 +16,7 @@ pub enum Instruction {
     /// Pop a value from the stack to the primary register (currently also moves primary to secondary first)
     Pop,
 
-    // binary ops
-    /// Add the secondary and primary registers => primary
-    Add,
-    /// Subtract the secondary register from the primary => primary
-    Sub,
-    /// Multiply the secondary and primary registers => primary
-    Mul,
-    /// Divide the primary reg by the secondary => primary
-    Div,
+    BinaryOp(BinOp),
 }
 
 impl Instruction {
@@ -73,19 +66,6 @@ impl Instruction {
         // load lhs into secondary
         buf.push(Instruction::Pop);
 
-        buf.push(match op {
-            BinOp::Add => Instruction::Add,
-            BinOp::Sub => Instruction::Sub,
-            BinOp::Mul => Instruction::Mul,
-            BinOp::Div => Instruction::Div,
-            BinOp::LogicalOr => todo!(),
-            BinOp::LogicalAnd => todo!(),
-            BinOp::Equals => todo!(),
-            BinOp::NotEquals => todo!(),
-            BinOp::LessThan => todo!(),
-            BinOp::LessThanOrEquals => todo!(),
-            BinOp::GreaterThan => todo!(),
-            BinOp::GreaterThanOrEquals => todo!(),
-        })
+        buf.push(Instruction::BinaryOp(*op))
     }
 }

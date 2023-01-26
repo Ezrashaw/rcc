@@ -1,5 +1,6 @@
 use core::{fmt, panic};
 use rcc_bytecode::{Bytecode, Instruction};
+use rcc_structures::BinOp;
 use std::fmt::Write;
 
 pub struct X86Backend<'a> {
@@ -67,18 +68,31 @@ impl<'a> X86Backend<'a> {
                 Self::indent(indent_lvl)
             )?,
 
-            Instruction::Add => writeln!(buf, "addl %ecx, %eax # into %eax")?,
-            Instruction::Sub => writeln!(buf, "subl %ecx, %eax # into %eax")?,
-            Instruction::Mul => writeln!(buf, "imul %ecx, %eax # into %eax")?,
-            Instruction::Div => writeln!(
-                buf,
-                "cdq\n{}\
-                idiv %ecx
-                ",
-                Self::indent(indent_lvl)
-            )?,
+            Instruction::BinaryOp(op) => Self::write_binop(buf, op, indent_lvl)?,
         }
 
         writeln!(buf)
+    }
+
+    fn write_binop(buf: &mut String, op: &BinOp, indent_lvl: u32) -> fmt::Result {
+        match op {
+            BinOp::Add => writeln!(buf, "addl %ecx, %eax # into %eax"),
+            BinOp::Sub => writeln!(buf, "subl %ecx, %eax # into %eax"),
+            BinOp::Mul => writeln!(buf, "imul %ecx, %eax # into %eax"),
+            BinOp::Div => writeln!(
+                buf,
+                "cdq\n{}\
+                idiv %ecx",
+                Self::indent(indent_lvl)
+            ),
+            BinOp::LogicalOr => todo!(),
+            BinOp::LogicalAnd => todo!(),
+            BinOp::Equals => todo!(),
+            BinOp::NotEquals => todo!(),
+            BinOp::LessThan => todo!(),
+            BinOp::LessThanOrEquals => todo!(),
+            BinOp::GreaterThan => todo!(),
+            BinOp::GreaterThanOrEquals => todo!(),
+        }
     }
 }

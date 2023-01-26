@@ -9,3 +9,4 @@ edition = "2021"
 peekmore = "1.0.0"
 rcc_error = { version = "0.0.0", path = "../rcc_error" }
 rcc_lexer = { version = "0.0.0", path = "../rcc_lexer" }
+rcc_structures = { version = "0.0.0", path = "../rcc_structures" }

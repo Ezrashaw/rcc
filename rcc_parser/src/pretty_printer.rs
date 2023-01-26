@@ -1,6 +1,8 @@
 use std::io::{self, Write};
 
-use crate::ast::{BinOp, Function, UnaryOp};
+use rcc_structures::{BinOp, UnaryOp};
+
+use crate::ast::Function;
 
 use super::ast::{Expression, Program, Statement};
 
