@@ -79,13 +79,12 @@ fn compile_program_verbose(input: &str) -> String {
 
     let bytecode = Bytecode::from_ast(&ast);
     println!("===== BYTECODE (for only function) ====");
-    for instruction in &bytecode.function().1 {
+    for instruction in bytecode.function().1 {
         println!("{instruction:?}");
     }
     println!("===================");
 
-    let x86 = X86Backend::new(bytecode);
-    let x86 = x86.gen_x86();
+    let x86 = X86Backend::gen_x86(&bytecode);
     println!("===== x86 ASM =====");
     print!("{}", x86);
     println!("===================");
@@ -101,8 +100,7 @@ fn compile_program(input: &str) -> String {
 
     let bytecode = Bytecode::from_ast(&ast);
 
-    let x86 = X86Backend::new(bytecode);
-    let x86 = x86.gen_x86();
+    let x86 = X86Backend::gen_x86(&bytecode);
 
     x86
 }

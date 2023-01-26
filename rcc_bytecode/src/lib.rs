@@ -18,7 +18,9 @@ impl<'a> Bytecode<'a> {
         }
     }
 
-    pub fn function(&self) -> &(&str, Vec<Instruction>) {
-        self.functions.first().unwrap()
+    pub fn function(&self) -> (&str, &[Instruction]) {
+        let function = self.functions.first().unwrap();
+
+        (function.0, &function.1)
     }
 }
