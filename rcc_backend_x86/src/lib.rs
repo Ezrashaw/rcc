@@ -58,6 +58,25 @@ impl<'a> X86Backend<'a> {
                 sete   %al          # set AL register (the lower byte of EAX) to 1 iff ZF is on",
                 Self::indent(indent_lvl)
             )?,
+
+            Instruction::Push => writeln!(buf, "push %eax # primary register onto stack")?,
+            Instruction::Pop => writeln!(
+                buf,
+                "movl %eax, %ecx # move primary to secondary\n{}\
+                pop %eax        # stack to primary",
+                Self::indent(indent_lvl)
+            )?,
+
+            Instruction::Add => writeln!(buf, "addl %ecx, %eax # into %eax")?,
+            Instruction::Sub => writeln!(buf, "subl %ecx, %eax # into %eax")?,
+            Instruction::Mul => writeln!(buf, "imul %ecx, %eax # into %eax")?,
+            Instruction::Div => writeln!(
+                buf,
+                "cdq\n{}\
+                idiv %ecx
+                ",
+                Self::indent(indent_lvl)
+            )?,
         }
 
         writeln!(buf)

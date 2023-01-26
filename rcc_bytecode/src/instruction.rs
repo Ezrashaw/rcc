@@ -1,4 +1,4 @@
-use rcc_parser::ast::{Expression, Function, Statement, UnaryOp};
+use rcc_parser::ast::{BinOp, Expression, Function, Statement, UnaryOp};
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
@@ -9,6 +9,21 @@ pub enum Instruction {
     Negate,
     BitwiseComplement,
     LogicalNegate,
+
+    /// Push the value being operated on to the stack
+    Push,
+    /// Pop a value from the stack to the primary register (currently also moves primary to secondary first)
+    Pop,
+
+    // binary ops
+    /// Add the secondary and primary registers => primary
+    Add,
+    /// Subtract the secondary register from the primary => primary
+    Sub,
+    /// Multiply the secondary and primary registers => primary
+    Mul,
+    /// Divide the primary reg by the secondary => primary
+    Div,
 }
 
 impl Instruction {
@@ -33,12 +48,7 @@ impl Instruction {
         match expression {
             Expression::Literal { val } => buf.push(Instruction::LoadInt(*val)),
             Expression::UnaryOp { expr, op } => Self::from_unary_op(buf, expr, op),
-            Expression::BinOp {
-                has_parens,
-                lhs,
-                rhs,
-                op,
-            } => todo!(),
+            Expression::BinOp { lhs, rhs, op, .. } => Self::from_binary_op(buf, lhs, rhs, op),
         }
     }
 
@@ -49,6 +59,25 @@ impl Instruction {
             UnaryOp::Negation => Instruction::Negate,
             UnaryOp::BitwiseComplement => Instruction::BitwiseComplement,
             UnaryOp::LogicalNegation => Instruction::LogicalNegate,
+        })
+    }
+
+    fn from_binary_op(buf: &mut Vec<Self>, lhs: &Expression, rhs: &Expression, op: &BinOp) {
+        Self::from_expression(buf, lhs);
+
+        // save lhs, rhs will overwrite the primary register
+        buf.push(Instruction::Push);
+
+        Self::from_expression(buf, rhs);
+
+        // load lhs into secondary
+        buf.push(Instruction::Pop);
+
+        buf.push(match op {
+            BinOp::Add => Instruction::Add,
+            BinOp::Sub => Instruction::Sub,
+            BinOp::Mul => Instruction::Mul,
+            BinOp::Div => Instruction::Div,
         })
     }
 }

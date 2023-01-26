@@ -1,7 +1,6 @@
 use std::{
-    collections::vec_deque,
     io::{stdin, stdout, Read, Write},
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{Command, Stdio},
 };
 
@@ -44,7 +43,7 @@ fn main() {
     });
 
     let mut gcc = Command::new("gcc")
-        .args(["-o", &path, "-xassembler", "-"])
+        .args(["-o", &path, "-xassembler", "-m32", "-"])
         .stdin(Stdio::piped())
         .spawn()
         .expect("failed to run `gcc`");
