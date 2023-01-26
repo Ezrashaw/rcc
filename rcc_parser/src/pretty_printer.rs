@@ -74,10 +74,18 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
                     self.buf,
                     " {} ",
                     match op {
-                        BinOp::Add => '+',
-                        BinOp::Sub => '-',
-                        BinOp::Mul => '*',
-                        BinOp::Div => '/',
+                        BinOp::Add => "+",
+                        BinOp::Sub => "-",
+                        BinOp::Mul => "*",
+                        BinOp::Div => "/",
+                        BinOp::LogicalOr => "||",
+                        BinOp::LogicalAnd => "&&",
+                        BinOp::Equals => "==",
+                        BinOp::NotEquals => "!+",
+                        BinOp::LessThan => "<",
+                        BinOp::LessThanOrEquals => "<=",
+                        BinOp::GreaterThan => ">",
+                        BinOp::GreaterThanOrEquals => ">=",
                     }
                 )?;
                 self.print_expr(rhs)?;

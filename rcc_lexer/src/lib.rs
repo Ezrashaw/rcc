@@ -28,6 +28,15 @@ pub enum TokenKind<'a> {
     Star,
     Slash,
 
+    DoubleAnd,
+    DoublePipe,
+    DoubleEquals,
+    ExclaimEquals,
+    LessThan,
+    LessThanEquals,
+    GreaterThan,
+    GreaterThanEquals,
+
     // complex
     Literal(u32),
     Ident(&'a str),
@@ -54,10 +63,22 @@ const_tokens! {
     // operators
     "-" => TokenKind::Minus,
     "~" => TokenKind::Tilde,
-    "!" => TokenKind::Exclamation,
     "+" => TokenKind::Plus,
     "*" => TokenKind::Star,
     "/" => TokenKind::Slash,
+
+    // double-char operators
+    "&&" => TokenKind::DoubleAnd,
+    "||" => TokenKind::DoublePipe,
+    "==" => TokenKind::DoubleEquals,
+    "!=" => TokenKind::ExclaimEquals,
+    "<=" => TokenKind::LessThanEquals,
+    ">=" => TokenKind::GreaterThanEquals,
+
+    // placed here for lower prio
+    "!" => TokenKind::Exclamation,
+    "<" => TokenKind::LessThan,
+    ">" => TokenKind::GreaterThan,
 }
 
 multi_char_tokens! {

@@ -78,6 +78,14 @@ impl Instruction {
             BinOp::Sub => Instruction::Sub,
             BinOp::Mul => Instruction::Mul,
             BinOp::Div => Instruction::Div,
+            BinOp::LogicalOr => todo!(),
+            BinOp::LogicalAnd => todo!(),
+            BinOp::Equals => todo!(),
+            BinOp::NotEquals => todo!(),
+            BinOp::LessThan => todo!(),
+            BinOp::LessThanOrEquals => todo!(),
+            BinOp::GreaterThan => todo!(),
+            BinOp::GreaterThanOrEquals => todo!(),
         })
     }
 }

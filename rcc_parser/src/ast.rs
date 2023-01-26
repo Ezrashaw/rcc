@@ -53,4 +53,13 @@ pub enum BinOp {
     Sub,
     Mul,
     Div,
+
+    LogicalOr,
+    LogicalAnd,
+    Equals,
+    NotEquals,
+    LessThan,
+    LessThanOrEquals,
+    GreaterThan,
+    GreaterThanOrEquals,
 }

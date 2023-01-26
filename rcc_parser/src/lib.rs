@@ -132,7 +132,7 @@ macro_rules! impl_binop {
             }
 
             fn parse_binop(&mut self) -> Box<crate::ast::Expression> {
-                self.parse_binop_impl(2)
+                self.parse_binop_impl(6)
             }
 
             fn parse_binop_impl(&mut self, lvl: u8) -> Box<crate::ast::Expression> {
@@ -164,10 +164,23 @@ macro_rules! impl_binop {
 
 impl_binop! {
     {
+        6 = BinOp::LogicalOr,
+        5 = BinOp::LogicalAnd,
+        4 = BinOp::Equals | BinOp::NotEquals,
+        3 = BinOp::LessThan | BinOp::LessThanOrEquals | BinOp::GreaterThan | BinOp::GreaterThanOrEquals,
         2 = BinOp::Add | BinOp::Sub,
         1 = BinOp::Mul | BinOp::Div,
     };
     {
+        TokenKind::DoublePipe => BinOp::LogicalOr,
+        TokenKind::DoubleAnd => BinOp::LogicalAnd,
+        TokenKind::DoubleEquals => BinOp::Equals,
+        TokenKind::ExclaimEquals => BinOp::NotEquals,
+        TokenKind::LessThan => BinOp::LessThan,
+        TokenKind::LessThanEquals => BinOp::LessThanOrEquals,
+        TokenKind::GreaterThan => BinOp::GreaterThanOrEquals,
+        TokenKind::GreaterThanEquals => BinOp::GreaterThanOrEquals,
+
         TokenKind::Plus => BinOp::Add,
         TokenKind::Minus => BinOp::Sub,
         TokenKind::Star => BinOp::Mul,
