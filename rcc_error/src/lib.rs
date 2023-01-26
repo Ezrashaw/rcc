@@ -1,4 +1,5 @@
 use std::{
+    cmp,
     fmt::{self, Display},
     io::Write,
 };
@@ -76,7 +77,7 @@ impl Display for SpannedError<'_> {
                 .collect::<String>();
 
             let arrows = std::iter::repeat('^')
-                .take(span.length().try_into().unwrap())
+                .take(cmp::max(span.length().try_into().unwrap(), 1))
                 .collect::<String>();
 
             buf.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)))

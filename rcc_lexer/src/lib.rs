@@ -43,21 +43,21 @@ pub enum Keyword {
     Return,
 }
 
-single_char_tokens! {
+const_tokens! {
     // general syntax
-    '{' => TokenKind::OpenBrace,
-    '}' => TokenKind::CloseBrace,
-    '(' => TokenKind::OpenParen,
-    ')' => TokenKind::CloseParen,
-    ';' => TokenKind::Semicolon,
+    "{" => TokenKind::OpenBrace,
+    "}" => TokenKind::CloseBrace,
+    "(" => TokenKind::OpenParen,
+    ")" => TokenKind::CloseParen,
+    ";" => TokenKind::Semicolon,
 
     // operators
-    '-' => TokenKind::Minus,
-    '~' => TokenKind::Tilde,
-    '!' => TokenKind::Exclamation,
-    '+' => TokenKind::Plus,
-    '*' => TokenKind::Star,
-    '/' => TokenKind::Slash,
+    "-" => TokenKind::Minus,
+    "~" => TokenKind::Tilde,
+    "!" => TokenKind::Exclamation,
+    "+" => TokenKind::Plus,
+    "*" => TokenKind::Star,
+    "/" => TokenKind::Slash,
 }
 
 multi_char_tokens! {

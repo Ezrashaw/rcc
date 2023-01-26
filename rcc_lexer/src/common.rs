@@ -30,11 +30,24 @@ impl<'a> Lexer<'a> {
         Some(ch.into())
     }
 
-    pub(crate) fn peek(&mut self) -> Option<char> {
+    pub(crate) fn peek(&self) -> Option<char> {
         if self.pos as usize == self.input.len() {
             None
         } else {
             Some(self.input.as_bytes()[self.pos as usize].into())
+        }
+    }
+
+    pub(crate) fn peek_length(&self, len: usize) -> Option<&str> {
+        if self.pos as usize + len > self.input.len() {
+            None
+        } else {
+            Some(
+                std::str::from_utf8(
+                    &self.input.as_bytes()[self.pos as usize..(self.pos as usize + len)],
+                )
+                .unwrap(),
+            )
         }
     }
 
@@ -48,8 +61,7 @@ impl<'a> Lexer<'a> {
         let ch = self.peek()?;
 
         // single character tokens
-        if let Some(kind) = Self::match_single_char_tokens(ch) {
-            self.next();
+        if let Some(kind) = self.match_const_tokens() {
             return Some((start, kind));
         }
 
@@ -66,14 +78,18 @@ impl<'a> Lexer<'a> {
     }
 }
 
-macro_rules! single_char_tokens {
-    ( $( $ch:literal => $tok:expr, )+ ) => {
+macro_rules! const_tokens {
+    ( $( $in:literal => $tok:expr, )+ ) => {
         impl<'a> crate::common::Lexer<'a> {
-            fn match_single_char_tokens(ch: char) -> Option<crate::TokenKind<'static>> {
-                match ch {
-                    $($ch => Some($tok),)+
-                    _ => None,
-                }
+            fn match_const_tokens(&mut self) -> Option<crate::TokenKind<'static>> {
+                $(
+                    if self.peek_length($in.len()).unwrap_or_default() == $in {
+                        self.pos += $in.len() as u32;
+                        return Some($tok);
+                    }
+                )+
+
+                None
             }
         }
     };
@@ -113,7 +129,7 @@ macro_rules! multi_char_tokens {
     };
 }
 
-pub(crate) use {multi_char_tokens, single_char_tokens};
+pub(crate) use {const_tokens, multi_char_tokens};
 
 impl<'a> Iterator for Lexer<'a> {
     type Item = Token<'a>;
