@@ -94,7 +94,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
             Some(TokenKind::Literal(val)) => Expression::Literal { val: *val },
 
             Some(tok) if let Some(unary) = Self::unary_op_from_tok(tok)
-                => Expression::UnaryOp { expr: Box::new(self.parse_expression()), op: unary },
+                => Expression::UnaryOp { expr: Box::new(self.parse_operand()), op: unary },
 
             Some(TokenKind::OpenParen) => {
                 let mut expr = self.parse_expression();
