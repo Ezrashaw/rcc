@@ -83,14 +83,35 @@ impl X86Backend {
                 idiv %ecx",
                 self.indent()
             ),
+
+            op @ (BinOp::Equals
+            | BinOp::NotEquals
+            | BinOp::LessThan
+            | BinOp::LessThanOrEquals
+            | BinOp::GreaterThan
+            | BinOp::GreaterThanOrEquals) => writeln!(
+                self.buf,
+                "cmpl %ecx, %eax\n{0}\
+                    movl , %eax\n{0}\
+                    set{1} %al",
+                self.indent(),
+                Self::get_relational_instruction(op)
+            ),
+
             BinOp::LogicalOr => todo!(),
             BinOp::LogicalAnd => todo!(),
-            BinOp::Equals => todo!(),
-            BinOp::NotEquals => todo!(),
-            BinOp::LessThan => todo!(),
-            BinOp::LessThanOrEquals => todo!(),
-            BinOp::GreaterThan => todo!(),
-            BinOp::GreaterThanOrEquals => todo!(),
+        }
+    }
+
+    fn get_relational_instruction(op: &BinOp) -> &'static str {
+        match op {
+            BinOp::Equals => "e",
+            BinOp::NotEquals => "ne",
+            BinOp::LessThan => "l",
+            BinOp::LessThanOrEquals => "le",
+            BinOp::GreaterThan => "g",
+            BinOp::GreaterThanOrEquals => "ge",
+            _ => panic!("provided binop was not relational operator!"),
         }
     }
 }
