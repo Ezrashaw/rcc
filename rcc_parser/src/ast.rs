@@ -35,7 +35,8 @@ pub enum Expression {
         op: UnaryOp,
     },
     Literal {
-        val: u32,
+        // Note that literals in source code cannot be negative, but constant folding might produce a negative value.
+        val: i32,
     },
     // Variable {
     //     id: u32,

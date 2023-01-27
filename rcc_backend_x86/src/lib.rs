@@ -92,7 +92,7 @@ impl X86Backend {
             | BinOp::GreaterThanOrEquals) => writeln!(
                 self.buf,
                 "cmpl %ecx, %eax\n{0}\
-                    movl , %eax\n{0}\
+                    movl $0, %eax\n{0}\
                     set{1} %al",
                 self.indent(),
                 Self::get_relational_instruction(op)

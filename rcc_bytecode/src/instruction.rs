@@ -3,7 +3,7 @@ use rcc_structures::{BinOp, UnaryOp};
 
 #[derive(Debug, Clone)]
 pub enum Instruction {
-    LoadInt(u32),
+    LoadInt(i32),
     Return,
 
     // unary ops

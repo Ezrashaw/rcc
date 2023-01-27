@@ -92,7 +92,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         let tok = self.input.next();
 
         match tok.as_ref().map(|t| &t.kind) {
-            Some(TokenKind::Literal(val)) => Expression::Literal { val: *val },
+            Some(TokenKind::Literal(val)) => Expression::Literal { val: *val as i32 },
 
             Some(tok) if let Some(unary) = Self::unary_op_from_tok(tok)
                 => Expression::UnaryOp { expr: Box::new(self.parse_operand()), op: unary },

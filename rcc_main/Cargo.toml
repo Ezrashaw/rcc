@@ -9,4 +9,5 @@ edition = "2021"
 rcc_backend_x86 = { version = "0.0.0", path = "../rcc_backend_x86" }
 rcc_bytecode = { version = "0.0.0", path = "../rcc_bytecode" }
 rcc_lexer = { version = "0.0.0", path = "../rcc_lexer" }
+rcc_opt = { version = "0.0.0", path = "../rcc_opt" }
 rcc_parser = { version = "0.0.0", path = "../rcc_parser" }

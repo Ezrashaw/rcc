@@ -47,7 +47,16 @@ dependencies = [
  "rcc_backend_x86",
  "rcc_bytecode",
  "rcc_lexer",
+ "rcc_opt",
  "rcc_parser",
+]
+
+[[package]]
+name = "rcc_opt"
+version = "0.0.0"
+dependencies = [
+ "rcc_parser",
+ "rcc_structures",
 ]
 
 [[package]]

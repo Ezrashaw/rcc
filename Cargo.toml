@@ -7,5 +7,6 @@ members = [
     "rcc_bytecode",
     "rcc_backend_x86",
     "rcc_main",
-    "rcc_structures"
+    "rcc_structures",
+    "rcc_opt"
 ]

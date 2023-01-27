@@ -77,7 +77,16 @@ fn compile_program_verbose(input: &str) -> String {
     PrettyPrinter::new(&mut stdout(), &ast).print().unwrap();
     println!("==================");
 
-    let bytecode = Bytecode::from_ast(&ast);
+    let opt_ast = rcc_opt::ConstantFolder::new(ast).optimize();
+    println!("===== OPTIMIZED =====");
+    println!("{opt_ast:#?}");
+    println!("=====================");
+
+    println!("===== PRETTY-OPT =====");
+    PrettyPrinter::new(&mut stdout(), &opt_ast).print().unwrap();
+    println!("======================");
+
+    let bytecode = Bytecode::from_ast(&opt_ast);
     println!("===== BYTECODE (for only function) ====");
     for instruction in bytecode.function().1 {
         println!("{instruction:?}");
@@ -97,6 +106,8 @@ fn compile_program(input: &str) -> String {
 
     let parser = Parser::new(lexer);
     let ast = parser.parse();
+
+    // let ast = rcc_opt::ConstantFolder::new(ast).optimize();
 
     let bytecode = Bytecode::from_ast(&ast);
 
