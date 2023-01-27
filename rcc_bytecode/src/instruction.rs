@@ -46,7 +46,7 @@ impl Instruction {
     pub(crate) fn from_function(function: &Function, label_counter: &mut u32) -> Vec<Self> {
         let mut buf = Vec::new();
 
-        Self::from_statement(&mut buf, &function.statement, label_counter);
+        Self::from_statement(&mut buf, &function.statements[0], label_counter);
 
         buf
     }
@@ -57,6 +57,8 @@ impl Instruction {
                 Self::from_expression(buf, val, 0, label_counter);
                 buf.push(Instruction::Return);
             }
+            Statement::Declaration(_, _) => todo!(),
+            Statement::Expression(_) => todo!(),
         }
     }
 
@@ -74,6 +76,11 @@ impl Instruction {
             Expression::BinOp { lhs, rhs, op, .. } => {
                 Self::from_binary_op(buf, lhs, rhs, op, reg, label_counter)
             }
+            Expression::Assignment {
+                identifier,
+                expression,
+            } => todo!(),
+            Expression::Variable { identifier } => todo!(),
         }
     }
 

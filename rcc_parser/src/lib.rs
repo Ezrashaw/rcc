@@ -111,7 +111,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 let init = if self
                     .input
                     .peek()
-                    .map(|t| t.kind)
+                    .map(|t| t.kind.clone())
                     .contains(&TokenKind::Equals)
                 {
                     self.input.next();
@@ -132,7 +132,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
     }
 
     fn parse_expression(&mut self, locals: &mut Vec<&'a str>) -> Expression {
-        if let Some(TokenKind::Equals) = self.input.peek_nth(1).map(|t| t.kind) {
+        if let Some(TokenKind::Equals) = self.input.peek_nth(1).map(|t| t.kind.clone()) {
             let ident_tok = self.input.next();
             let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident_tok else {
                 self.emit_err_from_token("<variable>", ident_tok);

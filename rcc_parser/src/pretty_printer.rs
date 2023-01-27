@@ -16,8 +16,15 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
         Self { buf, ast }
     }
 
-    fn ident(&mut self, lvl: u32) -> io::Result<()> {
+    fn indent(&mut self, lvl: u32) -> io::Result<()> {
         write!(self.buf, "{:>width$}", "", width = (lvl * 4) as usize)
+    }
+
+    fn print_variable(&mut self, var: u32) -> io::Result<()> {
+        // FIXME: we won't always just have one function!
+        let name = self.ast.function.locals[var as usize];
+
+        write!(self.buf, "{name}")
     }
 
     pub fn print(mut self) -> io::Result<()> {
@@ -27,19 +34,30 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
     fn print_fn(&mut self, function: &Function) -> io::Result<()> {
         writeln!(self.buf, "int {}() {{", function.name)?;
 
-        self.print_stmt(&function.statement, 1)?;
+        for stmt in &function.statements {
+            self.print_stmt(&stmt, 1)?;
+        }
 
         writeln!(self.buf, "}}")
     }
 
     fn print_stmt(&mut self, stmt: &Statement, ident_level: u32) -> io::Result<()> {
-        self.ident(ident_level)?;
+        self.indent(ident_level)?;
 
         match stmt {
             Statement::Return(expr) => {
                 write!(self.buf, "return ")?;
                 self.print_expr(expr)?;
             }
+            Statement::Declaration(var, expr) => {
+                write!(self.buf, "int ")?;
+                self.print_variable(*var)?;
+                if let Some(expr) = expr {
+                    write!(self.buf, " = ")?;
+                    self.print_expr(expr)?;
+                }
+            }
+            Statement::Expression(expr) => self.print_expr(expr)?,
         };
 
         writeln!(self.buf, ";")
@@ -98,6 +116,15 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
 
                 Ok(())
             }
+            Expression::Assignment {
+                identifier,
+                expression,
+            } => {
+                self.print_variable(*identifier)?;
+                write!(self.buf, " = ")?;
+                self.print_expr(expression)
+            }
+            Expression::Variable { identifier } => self.print_variable(*identifier),
         }
     }
 }

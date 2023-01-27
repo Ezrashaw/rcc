@@ -11,9 +11,21 @@ impl<'a> ConstantFolder<'a> {
     }
 
     pub fn optimize(mut self) -> Program<'a> {
-        match self.ast.function.statement {
-            Statement::Return(ref mut expr) => Self::constify_expr_or_inner(expr),
+        for stmt in &mut self.ast.function.statements {
+            match stmt {
+                Statement::Return(ref mut expr) => Self::constify_expr_or_inner(expr),
+                Statement::Declaration(_, Some(ref mut expr)) => Self::constify_expr_or_inner(expr),
+                Statement::Expression(ref mut expr) => Self::constify_expr_or_inner(expr),
+
+                _ => (),
+            }
         }
+
+        // remove useless statements
+        self.ast
+            .function
+            .statements
+            .retain(|stmt| !matches!(stmt, Statement::Expression(Expression::Literal { .. })));
 
         self.ast
     }
@@ -64,6 +76,8 @@ impl<'a> ConstantFolder<'a> {
                 UnaryOp::LogicalNegation => None,
             },
             Expression::Literal { val } => Some(*val as i32),
+            Expression::Assignment { .. } => None,
+            Expression::Variable { .. } => None,
         }
     }
 }
