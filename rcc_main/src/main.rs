@@ -9,6 +9,8 @@ use rcc_bytecode::Bytecode;
 use rcc_lexer::Lexer;
 use rcc_parser::{pretty_printer::PrettyPrinter, Parser};
 
+const OPTIMIZE: bool = false;
+
 fn main() {
     let arg = std::env::args().nth(1);
     let (input, path) = match arg.as_deref() {
@@ -43,7 +45,7 @@ fn main() {
     });
 
     let mut gcc = Command::new("gcc")
-        .args(["-o", &path, "-xassembler", "-m32", "-"])
+        .args(["-o", &path, "-xassembler", "-"])
         .stdin(Stdio::piped())
         .spawn()
         .expect("failed to run `gcc`");
@@ -77,16 +79,22 @@ fn compile_program_verbose(input: &str) -> String {
     PrettyPrinter::new(&mut stdout(), &ast).print().unwrap();
     println!("==================");
 
-    let opt_ast = rcc_opt::ConstantFolder::new(ast).optimize();
-    println!("===== OPTIMIZED =====");
-    println!("{opt_ast:#?}");
-    println!("=====================");
+    let ast = if OPTIMIZE {
+        rcc_opt::ConstantFolder::new(ast).optimize()
+    } else {
+        ast
+    };
+    if OPTIMIZE {
+        println!("===== OPTIMIZED =====");
+        println!("{ast:#?}");
+        println!("=====================");
 
-    println!("===== PRETTY-OPT =====");
-    PrettyPrinter::new(&mut stdout(), &opt_ast).print().unwrap();
-    println!("======================");
+        println!("===== PRETTY-OPT =====");
+        PrettyPrinter::new(&mut stdout(), &ast).print().unwrap();
+        println!("======================");
+    }
 
-    let bytecode = Bytecode::from_ast(&opt_ast);
+    let bytecode = Bytecode::from_ast(&ast);
     println!("===== BYTECODE (for only function) ====");
     for instruction in bytecode.function().1 {
         println!("{instruction:?}");
@@ -107,7 +115,11 @@ fn compile_program(input: &str) -> String {
     let parser = Parser::new(lexer);
     let ast = parser.parse();
 
-    // let ast = rcc_opt::ConstantFolder::new(ast).optimize();
+    let ast = if OPTIMIZE {
+        rcc_opt::ConstantFolder::new(ast).optimize()
+    } else {
+        ast
+    };
 
     let bytecode = Bytecode::from_ast(&ast);
 

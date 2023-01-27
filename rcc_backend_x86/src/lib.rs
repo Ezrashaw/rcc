@@ -1,7 +1,10 @@
 use core::{fmt, panic};
 use rcc_bytecode::{Bytecode, Instruction};
-use rcc_structures::BinOp;
+use rcc_structures::{BinOp, UnaryOp};
+use register::Register;
 use std::fmt::Write;
+
+mod register;
 
 pub struct X86Backend {
     buf: String,
@@ -28,6 +31,7 @@ impl X86Backend {
             _ => panic!("too much indent"),
         }
     }
+
     fn write_function(&mut self, name: &str, bytecode: &[Instruction]) -> fmt::Result {
         writeln!(self.buf, ".globl {}\n{0}:", name)?;
 
@@ -44,43 +48,56 @@ impl X86Backend {
         write!(self.buf, "{0}# {instruction:?}\n{0}", self.indent())?;
 
         match instruction {
-            Instruction::LoadInt(val) => writeln!(self.buf, "movl ${val}, %eax")?,
-            Instruction::Return => writeln!(self.buf, "ret")?,
-
-            // unary ops
-            Instruction::Negate => writeln!(self.buf, "neg %eax")?,
-            Instruction::BitwiseComplement => writeln!(self.buf, "not %eax")?,
-            Instruction::LogicalNegate => writeln!(
+            Instruction::LoadInt(val, reg) => writeln!(
                 self.buf,
-                "cmpl   $0, %eax     # set ZF on if exp == 0, set it off otherwise\n{0}\
-                movl   $0, %eax     # zero out EAX (doesn't change FLAGS)\n{0}\
-                sete   %al          # set AL register (the lower byte of EAX) to 1 iff ZF is on",
-                self.indent()
+                "movl ${val}, %{}",
+                <&u8 as Into<Register>>::into(reg)
             )?,
 
-            Instruction::Push => writeln!(self.buf, "push %eax # primary register onto stack")?,
-            Instruction::Pop => writeln!(
+            Instruction::Return => writeln!(
                 self.buf,
-                "movl %eax, %ecx # move primary to secondary\n{}\
-                pop %eax        # stack to primary",
-                self.indent()
+                "movl %{}, %eax\n{}\
+                ret",
+                <&u8 as Into<Register>>::into(&0),
+                self.indent(),
             )?,
 
-            Instruction::BinaryOp(op) => self.write_binop(op)?,
+            Instruction::BinaryOp(op, lhs, rhs) => self.write_binop(op, lhs.into(), rhs.into())?,
+            Instruction::UnaryOp(op, reg) => self.write_unary_op(op, reg.into())?,
         }
 
         writeln!(self.buf)
     }
 
-    fn write_binop(&mut self, op: &BinOp) -> fmt::Result {
+    fn write_unary_op(&mut self, op: &UnaryOp, reg: Register) -> fmt::Result {
         match op {
-            BinOp::Add => writeln!(self.buf, "addl %ecx, %eax # into %eax"),
-            BinOp::Sub => writeln!(self.buf, "subl %ecx, %eax # into %eax"),
-            BinOp::Mul => writeln!(self.buf, "imul %ecx, %eax # into %eax"),
-            BinOp::Div => writeln!(
+            UnaryOp::Negation => writeln!(self.buf, "neg %{reg}"),
+            UnaryOp::BitwiseComplement => writeln!(self.buf, "not %{reg}"),
+            UnaryOp::LogicalNegation => writeln!(
                 self.buf,
-                "cdq\n{}\
-                idiv %ecx",
+                "cmpl   $0, %{reg}     # set ZF on if exp == 0, set it off otherwise\n{0}\
+                sete   %{1}          # set {1} register (the lower byte of {reg}) to 1 if ZF is on, note that this clears {reg}",
+                self.indent(),
+                reg.get_low_8()
+            ),
+        }
+    }
+
+    fn write_binop(&mut self, op: &BinOp, lhs: Register, rhs: Register) -> fmt::Result {
+        match op {
+            BinOp::Add => writeln!(self.buf, "addl %{rhs}, %{lhs} # into %{lhs}"),
+            BinOp::Sub => writeln!(self.buf, "subl %{rhs}, %{lhs} # into %{lhs}"),
+            BinOp::Mul => writeln!(self.buf, "imul %{rhs}, %{lhs} # into %{lhs}"),
+
+            // x86 division (`idiv`) requires the dividend to be in EDX:EAX, and
+            // the divisor register is passed separately. This means we must put
+            // EAX and EDX on the stack while we do the division.
+            BinOp::Div => write!(
+                self.buf,
+                "movl %{lhs}, %eax\n{0}\
+                cdq\n{0}\
+                idiv %{rhs}\n{0}\
+                movl %eax, %{lhs}\n{0}",
                 self.indent()
             ),
 
@@ -91,11 +108,12 @@ impl X86Backend {
             | BinOp::GreaterThan
             | BinOp::GreaterThanOrEquals) => writeln!(
                 self.buf,
-                "cmpl %ecx, %eax\n{0}\
-                    movl $0, %eax\n{0}\
-                    set{1} %al",
+                "cmpl %{rhs}, %{lhs}\n{0}\
+                    movl $0, %{lhs}\n{0}\
+                    set{1} %{2}",
                 self.indent(),
-                Self::get_relational_instruction(op)
+                Self::get_relational_instruction(op),
+                lhs.get_low_8()
             ),
 
             BinOp::LogicalOr => todo!(),

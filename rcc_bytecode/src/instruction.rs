@@ -1,22 +1,27 @@
 use rcc_parser::ast::{Expression, Function, Statement};
 use rcc_structures::{BinOp, UnaryOp};
 
+/// Bytecode instruction used by `rcc` internally.
+///
+/// It targets a register machine (currently only 32-bit signed registers),
+/// with an "infinite" number of registers.
+/// (the x86 backend overflows registers to the stack)
 #[derive(Debug, Clone)]
 pub enum Instruction {
-    LoadInt(i32),
+    /// Loads a constant integer into the given register.
+    LoadInt(i32, u8),
+
+    /// Returns the value from register 0, `EAX` on x86.
     Return,
 
-    // unary ops
-    Negate,
-    BitwiseComplement,
-    LogicalNegate,
+    /// Applies the given binary operation to the two registers.
+    ///
+    /// Note that the first register is the LHS and the second the RHS.
+    /// The result is stored in the LHS register.
+    BinaryOp(BinOp, u8, u8),
 
-    /// Push the value being operated on to the stack
-    Push,
-    /// Pop a value from the stack to the primary register (currently also moves primary to secondary first)
-    Pop,
-
-    BinaryOp(BinOp),
+    /// Applies the given unary operation to the specified register.
+    UnaryOp(UnaryOp, u8),
 }
 
 impl Instruction {
@@ -31,41 +36,37 @@ impl Instruction {
     fn from_statement(buf: &mut Vec<Self>, statement: &Statement) {
         match statement {
             Statement::Return(val) => {
-                Self::from_expression(buf, val);
+                Self::from_expression(buf, val, 0);
                 buf.push(Instruction::Return);
             }
         }
     }
 
-    fn from_expression(buf: &mut Vec<Self>, expression: &Expression) {
+    fn from_expression(buf: &mut Vec<Self>, expression: &Expression, reg: u8) {
         match expression {
-            Expression::Literal { val } => buf.push(Instruction::LoadInt(*val)),
-            Expression::UnaryOp { expr, op } => Self::from_unary_op(buf, expr, op),
-            Expression::BinOp { lhs, rhs, op, .. } => Self::from_binary_op(buf, lhs, rhs, op),
+            Expression::Literal { val } => buf.push(Instruction::LoadInt(*val, reg)),
+            Expression::UnaryOp { expr, op } => Self::from_unary_op(buf, expr, op, reg),
+            Expression::BinOp { lhs, rhs, op, .. } => Self::from_binary_op(buf, lhs, rhs, op, reg),
         }
     }
 
-    fn from_unary_op(buf: &mut Vec<Self>, inner: &Expression, op: &UnaryOp) {
-        Self::from_expression(buf, inner);
+    fn from_unary_op(buf: &mut Vec<Self>, inner: &Expression, op: &UnaryOp, reg: u8) {
+        Self::from_expression(buf, inner, reg);
 
-        buf.push(match op {
-            UnaryOp::Negation => Instruction::Negate,
-            UnaryOp::BitwiseComplement => Instruction::BitwiseComplement,
-            UnaryOp::LogicalNegation => Instruction::LogicalNegate,
-        })
+        buf.push(Instruction::UnaryOp(*op, reg))
     }
 
-    fn from_binary_op(buf: &mut Vec<Self>, lhs: &Expression, rhs: &Expression, op: &BinOp) {
-        Self::from_expression(buf, lhs);
+    fn from_binary_op(
+        buf: &mut Vec<Self>,
+        lhs: &Expression,
+        rhs: &Expression,
+        op: &BinOp,
+        reg: u8,
+    ) {
+        // FIXME: this always works, but we should have a mechanism to alloc/dealloc regs, producing the same result with better simplicity.
+        Self::from_expression(buf, lhs, reg);
+        Self::from_expression(buf, rhs, reg + 1);
 
-        // save lhs, rhs will overwrite the primary register
-        buf.push(Instruction::Push);
-
-        Self::from_expression(buf, rhs);
-
-        // load lhs into secondary
-        buf.push(Instruction::Pop);
-
-        buf.push(Instruction::BinaryOp(*op))
+        buf.push(Instruction::BinaryOp(*op, reg, reg + 1))
     }
 }
