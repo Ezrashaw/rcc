@@ -64,6 +64,24 @@ impl X86Backend {
 
             Instruction::BinaryOp(op, lhs, rhs) => self.write_binop(op, lhs.into(), rhs.into())?,
             Instruction::UnaryOp(op, reg) => self.write_unary_op(op, reg.into())?,
+
+            Instruction::ShortCircuit(reg, should_short, jump_loc) => writeln!(
+                self.buf,
+                "cmpl $0, %{} # check if e1 is true\n{}\
+                {} _{jump_loc}  # e1 is 0, we don't need to evaluate clause 2",
+                <&u8 as Into<Register>>::into(reg),
+                self.indent(),
+                if *should_short { "jne" } else { "je" }
+            )?,
+            Instruction::BinaryBooleanOp(reg, jump_loc) => writeln!(
+                self.buf,
+                "cmpl $0, %{}  # check if e2 is true\n{}\
+                setne %{}      # set AL register (the low byte of EAX) to 1 iff e2 != 0\n\
+            _{jump_loc}: # short-circuit jump label",
+                <&u8 as Into<Register>>::into(reg),
+                self.indent(),
+                <&u8 as Into<Register>>::into(reg).get_low_8()
+            )?,
         }
 
         writeln!(self.buf)
@@ -116,8 +134,8 @@ impl X86Backend {
                 lhs.get_low_8()
             ),
 
-            BinOp::LogicalOr => todo!(),
-            BinOp::LogicalAnd => todo!(),
+            BinOp::LogicalOr => panic!("`Instruction::BinOp(LogicalOr)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
+            BinOp::LogicalAnd => panic!("`Instruction::BinOp(LogicalAnd)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
         }
     }
 

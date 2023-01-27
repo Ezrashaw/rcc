@@ -11,7 +11,9 @@ pub struct Bytecode<'a> {
 
 impl<'a> Bytecode<'a> {
     pub fn from_ast(ast: &Program<'a>) -> Self {
-        let function = Instruction::from_function(&ast.function);
+        let mut label_counter = 0;
+
+        let function = Instruction::from_function(&ast.function, &mut label_counter);
 
         Self {
             functions: vec![(ast.function.name, function)],
