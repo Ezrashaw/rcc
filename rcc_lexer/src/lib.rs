@@ -27,6 +27,7 @@ pub enum TokenKind<'a> {
     Plus,
     Star,
     Slash,
+    Equals,
 
     DoubleAnd,
     DoublePipe,
@@ -79,6 +80,7 @@ const_tokens! {
     "!" => TokenKind::Exclamation,
     "<" => TokenKind::LessThan,
     ">" => TokenKind::GreaterThan,
+    "=" => TokenKind::Equals,
 }
 
 multi_char_tokens! {

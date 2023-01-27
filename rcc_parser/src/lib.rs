@@ -1,6 +1,7 @@
 #![feature(let_chains)]
 #![feature(is_some_and)]
 #![feature(if_let_guard)]
+#![feature(option_result_contains)]
 
 use self::ast::{Expression, Program, Statement};
 
@@ -69,36 +70,102 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         self.expect_token(TokenKind::CloseParen);
         self.expect_token(TokenKind::OpenBrace);
 
-        let statement = self.parse_statement();
+        let mut statements = Vec::new();
+        let mut locals = Vec::new();
+        while self
+            .input
+            .peek()
+            .map_or(false, |tk| tk.kind != TokenKind::CloseBrace)
+        {
+            statements.push(self.parse_statement(&mut locals));
+        }
 
         self.expect_token(TokenKind::CloseBrace);
 
-        Function { name, statement }
+        Function {
+            name,
+            statements,
+            locals,
+        }
     }
 
-    fn parse_statement(&mut self) -> Statement {
-        self.expect_token(TokenKind::Keyword(Keyword::Return));
-        let expression = self.parse_expression();
+    fn parse_statement(&mut self, locals: &mut Vec<&'a str>) -> Statement {
+        let tok = self.input.next();
+
+        let stmt = match tok.map(|t| t.kind) {
+            Some(TokenKind::Keyword(Keyword::Return)) => {
+                let expression = self.parse_expression(locals);
+
+                Statement::Return(expression)
+            }
+
+            Some(TokenKind::Keyword(Keyword::Int)) => {
+                let ident = self.input.next();
+                let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident else {
+                    self.emit_err_from_token("<identifier>", ident);
+                };
+
+                locals.push(ident);
+                let ident = locals.len();
+
+                let init = if self
+                    .input
+                    .peek()
+                    .map(|t| t.kind)
+                    .contains(&TokenKind::Equals)
+                {
+                    self.input.next();
+
+                    Some(self.parse_expression(locals))
+                } else {
+                    None
+                };
+
+                Statement::Declaration(ident as u32, init)
+            }
+
+            _ => Statement::Expression(self.parse_expression(locals)),
+        };
+
         self.expect_token(TokenKind::Semicolon);
-
-        Statement::Return(expression)
+        stmt
     }
 
-    fn parse_expression(&mut self) -> Expression {
-        *self.parse_binop()
+    fn parse_expression(&mut self, locals: &mut Vec<&'a str>) -> Expression {
+        if let Some(TokenKind::Equals) = self.input.peek_nth(1).map(|t| t.kind) {
+            let ident_tok = self.input.next();
+            let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident_tok else {
+                self.emit_err_from_token("<variable>", ident_tok);
+            };
+
+            let Some(id) = locals.iter().position(|id| *id == ident) else {
+                SpannedError::with_span("undefined variable", ident_tok.unwrap().span).emit()
+            };
+
+            self.expect_token(TokenKind::Equals);
+
+            let expression = self.parse_expression(locals);
+
+            Expression::Assignment {
+                identifier: id as u32,
+                expression: Box::new(expression),
+            }
+        } else {
+            *self.parse_binop(locals)
+        }
     }
 
-    fn parse_operand(&mut self) -> Expression {
+    fn parse_operand(&mut self, locals: &mut Vec<&'a str>) -> Expression {
         let tok = self.input.next();
 
         match tok.as_ref().map(|t| &t.kind) {
             Some(TokenKind::Literal(val)) => Expression::Literal { val: *val as i32 },
 
             Some(tok) if let Some(unary) = Self::unary_op_from_tok(tok)
-                => Expression::UnaryOp { expr: Box::new(self.parse_operand()), op: unary },
+                => Expression::UnaryOp { expr: Box::new(self.parse_operand(locals)), op: unary },
 
             Some(TokenKind::OpenParen) => {
-                let mut expr = self.parse_expression();
+                let mut expr = self.parse_expression(locals);
                 if let Expression::BinOp { ref mut has_parens, .. } = expr {
                     *has_parens = true;
                 }
@@ -106,6 +173,14 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 self.expect_token(TokenKind::CloseParen);
                 expr
             },
+
+            Some(TokenKind::Ident(var)) => {
+                if let Some(id) = locals.iter().position(|id| id == var) {
+                    Expression::Variable { identifier: id as u32 }
+                } else {
+                    SpannedError::with_span("undefined variable", tok.unwrap().span).emit()
+                }
+            }
 
             _ => self.emit_err_from_token("<expresion>", tok),
         }
@@ -132,16 +207,16 @@ macro_rules! impl_binop {
                 }
             }
 
-            fn parse_binop(&mut self) -> Box<crate::ast::Expression> {
-                self.parse_binop_impl(6)
+            fn parse_binop(&mut self, locals: &mut Vec<&'a str>) -> Box<crate::ast::Expression> {
+                self.parse_binop_impl(6, locals)
             }
 
-            fn parse_binop_impl(&mut self, lvl: u8) -> Box<crate::ast::Expression> {
+            fn parse_binop_impl(&mut self, lvl: u8, locals: &mut Vec<&'a str>) -> Box<crate::ast::Expression> {
                 if lvl == 0 {
-                    return Box::new(self.parse_operand());
+                    return Box::new(self.parse_operand(locals));
                 }
 
-                let lhs = self.parse_binop_impl(lvl - 1);
+                let lhs = self.parse_binop_impl(lvl - 1, locals);
 
                 match lvl {
                     $($lvl => {
@@ -149,7 +224,7 @@ macro_rules! impl_binop {
                         while let Some(op) = self.input.peek().map(|tk| tk.kind.clone()).and_then(Self::map_tok_to_op) && matches!(op, $match) {
                             self.input.next();
 
-                            let rhs = self.parse_binop_impl(lvl - 1);
+                            let rhs = self.parse_binop_impl(lvl - 1, locals);
 
                             lhs = Box::new(crate::ast::Expression::BinOp { has_parens: false, lhs, rhs, op })
                         }
