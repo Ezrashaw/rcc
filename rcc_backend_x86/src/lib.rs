@@ -37,6 +37,14 @@ impl X86Backend {
 
         self.indent_lvl = 1;
 
+        // write function prologue, sets up a stack frame
+        writeln!(
+            self.buf,
+            "{0}pushq %rbp         # save old value of RBP\n{0}\
+            movq %rsp, %rbp    # current top of stack is bottom of new stack frame\n",
+            self.indent()
+        )?;
+
         for instr in bytecode {
             self.write_instruction(instr)?;
         }
@@ -56,10 +64,12 @@ impl X86Backend {
 
             Instruction::Return => writeln!(
                 self.buf,
-                "movl %{}, %eax\n{}\
+                "movl %{1}, %eax\n{0}\
+                movq %rbp, %rsp # restore RSP; now it points to old RBP\n{0}\
+                pop %rbp        # restore old RBP; now RSP is where it was before prologue\n{0}\
                 ret",
-                <&u8 as Into<Register>>::into(&0),
                 self.indent(),
+                <&u8 as Into<Register>>::into(&0),
             )?,
 
             Instruction::BinaryOp(op, lhs, rhs) => self.write_binop(op, lhs.into(), rhs.into())?,
@@ -81,6 +91,26 @@ impl X86Backend {
                 <&u8 as Into<Register>>::into(reg),
                 self.indent(),
                 <&u8 as Into<Register>>::into(reg).get_low_8()
+            )?,
+
+            Instruction::DeclareVariable(var, reg) => writeln!(
+                self.buf,
+                "movl %{}, -{}(%rbp)\n{}subq $4, %rsp",
+                <&u8 as Into<Register>>::into(reg),
+                (var + 1) * 4,
+                self.indent()
+            )?,
+            Instruction::AssignVariable(var, reg) => writeln!(
+                self.buf,
+                "movl %{}, -{}(%rbp)",
+                <&u8 as Into<Register>>::into(reg),
+                (var + 1) * 4
+            )?,
+            Instruction::LoadVariable(var, reg) => writeln!(
+                self.buf,
+                "movl -{}(%rbp), %{}",
+                (var + 1) * 4,
+                <&u8 as Into<Register>>::into(reg)
             )?,
         }
 

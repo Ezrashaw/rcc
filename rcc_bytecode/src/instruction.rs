@@ -40,13 +40,33 @@ pub enum Instruction {
     ///
     /// Also provides location for [`Instruction::ShortCircuit`] to jump to.
     BinaryBooleanOp(u8, u32),
+
+    /// Declares a new local variable on the stack.
+    ///
+    /// For x86, simply emits `pushl %{reg}`.
+    // FIXME: how can we optimize `LoadInt` + `DefineVariable`? we should remove the register indirection.
+    DeclareVariable(u32, u8),
+
+    /// Modifies a local variable (declared with [`Instruction::DeclareVariable`]).
+    ///
+    /// Assigns the variable with the given identifier, for x86 these are
+    /// multiplied and converted to `EBP` offsets.
+    AssignVariable(u32, u8),
+
+    /// Loads the local variable into the given register.
+    ///
+    /// Uses the same logic as [`Instruction::AssignVariable`] for finding
+    /// stack offsets.
+    LoadVariable(u32, u8),
 }
 
 impl Instruction {
     pub(crate) fn from_function(function: &Function, label_counter: &mut u32) -> Vec<Self> {
         let mut buf = Vec::new();
 
-        Self::from_statement(&mut buf, &function.statements[0], label_counter);
+        for stmt in &function.statements {
+            Self::from_statement(&mut buf, stmt, label_counter);
+        }
 
         buf
     }
@@ -57,8 +77,10 @@ impl Instruction {
                 Self::from_expression(buf, val, 0, label_counter);
                 buf.push(Instruction::Return);
             }
-            Statement::Declaration(_, _) => todo!(),
-            Statement::Expression(_) => todo!(),
+            Statement::Declaration(id, val) => {
+                Self::from_declaration(buf, *id, val.as_ref(), label_counter)
+            }
+            Statement::Expression(expr) => Self::from_expression(buf, expr, 0, label_counter),
         }
     }
 
@@ -79,8 +101,14 @@ impl Instruction {
             Expression::Assignment {
                 identifier,
                 expression,
-            } => todo!(),
-            Expression::Variable { identifier } => todo!(),
+            } => {
+                Self::from_expression(buf, expression, reg, label_counter);
+
+                buf.push(Instruction::AssignVariable(*identifier, reg))
+            }
+            Expression::Variable { identifier } => {
+                buf.push(Instruction::LoadVariable(*identifier, reg))
+            }
         }
     }
 
@@ -123,5 +151,25 @@ impl Instruction {
             Self::from_expression(buf, rhs, reg + 1, label_counter);
             buf.push(Instruction::BinaryOp(*op, reg, reg + 1));
         }
+    }
+
+    fn from_declaration(
+        buf: &mut Vec<Self>,
+        id: u32,
+        val: Option<&Expression>,
+        label_counter: &mut u32,
+    ) {
+        const REGISTER: u8 = 0;
+
+        if let Some(init) = val {
+            Self::from_expression(buf, init, REGISTER, label_counter)
+        } else {
+            // If a variable is declared but not initialized, then we can just
+            // initialize to 0. The standard does not specify a value for this
+            // situation. Ahh, the wonders of C.
+            buf.push(Instruction::LoadInt(0, REGISTER))
+        }
+
+        buf.push(Instruction::DeclareVariable(id, REGISTER))
     }
 }

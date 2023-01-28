@@ -100,10 +100,15 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
             }
 
             Some(TokenKind::Keyword(Keyword::Int)) => {
-                let ident = self.input.next();
-                let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident else {
-                    self.emit_err_from_token("<identifier>", ident);
+                let ident_tok = self.input.next();
+                let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident_tok else {
+                    self.emit_err_from_token("<identifier>", ident_tok);
                 };
+
+                if locals.contains(&ident) {
+                    SpannedError::with_span("variable already defined", ident_tok.unwrap().span)
+                        .emit()
+                }
 
                 locals.push(ident);
                 let ident = locals.len();
