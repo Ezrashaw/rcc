@@ -4,12 +4,14 @@ use std::{
     process::{Command, Stdio},
 };
 
+use rcc_backend_llvm::LlvmBackend;
 use rcc_backend_x86::X86Backend;
 use rcc_bytecode::Bytecode;
 use rcc_lexer::Lexer;
 use rcc_parser::{pretty_printer::PrettyPrinter, Parser};
 
 const OPTIMIZE: bool = false;
+const USE_LLVM: bool = false;
 
 fn main() {
     let arg = std::env::args().nth(1);
@@ -44,19 +46,50 @@ fn main() {
             .to_string()
     });
 
-    let mut gcc = Command::new("gcc")
-        .args(["-o", &path, "-xassembler", "-"])
-        .stdin(Stdio::piped())
-        .spawn()
-        .expect("failed to run `gcc`");
+    if USE_LLVM {
+        let mut llc = Command::new("llc")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("failed to run `llc`");
 
-    gcc.stdin
-        .as_mut()
-        .unwrap()
-        .write_all(asm.as_bytes())
-        .expect("failed to pipe to `gcc`");
+        llc.stdin
+            .as_mut()
+            .unwrap()
+            .write_all(asm.as_bytes())
+            .expect("failed to pipe to `llc`");
 
-    gcc.wait().unwrap();
+        let asm = llc.wait_with_output().unwrap();
+
+        let mut clang = Command::new("clang")
+            .args(["-o", &path, "-xassembler", "-"])
+            .stdin(Stdio::piped())
+            .spawn()
+            .expect("failed to run `clang`");
+
+        clang
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(&asm.stdout)
+            .expect("failed to pipe to `clang`");
+
+        clang.wait().unwrap();
+    } else {
+        let mut gcc = Command::new("gcc")
+            .args(["-o", &path, "-xassembler", "-"])
+            .stdin(Stdio::piped())
+            .spawn()
+            .expect("failed to run `gcc`");
+
+        gcc.stdin
+            .as_mut()
+            .unwrap()
+            .write_all(asm.as_bytes())
+            .expect("failed to pipe to `gcc`");
+
+        gcc.wait().unwrap();
+    }
 }
 
 fn compile_program_verbose(input: &str) -> String {
@@ -101,12 +134,19 @@ fn compile_program_verbose(input: &str) -> String {
     }
     println!("===================");
 
-    let x86 = X86Backend::gen_x86(&bytecode);
-    println!("===== x86 ASM =====");
-    print!("{}", x86);
+    let asm = if USE_LLVM {
+        LlvmBackend::gen_llvm(&bytecode)
+    } else {
+        X86Backend::gen_x86(&bytecode)
+    };
+    println!(
+        "===== {} =====",
+        if USE_LLVM { "LLVM IR" } else { "x86 ASM" }
+    );
+    print!("{}", asm);
     println!("===================");
 
-    x86
+    asm
 }
 
 fn compile_program(input: &str) -> String {
@@ -123,7 +163,9 @@ fn compile_program(input: &str) -> String {
 
     let bytecode = Bytecode::from_ast(&ast);
 
-    let x86 = X86Backend::gen_x86(&bytecode);
-
-    x86
+    if USE_LLVM {
+        LlvmBackend::gen_llvm(&bytecode)
+    } else {
+        X86Backend::gen_x86(&bytecode)
+    }
 }
