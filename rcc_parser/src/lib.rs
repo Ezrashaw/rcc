@@ -82,6 +82,14 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
         self.expect_token(TokenKind::CloseBrace);
 
+        // Ensure that we have a return statement somewhere, if not, add one.
+        if !statements
+            .iter()
+            .any(|stmt| matches!(stmt, Statement::Return(_)))
+        {
+            statements.push(Statement::Return(Expression::Literal { val: 0 }));
+        }
+
         Function {
             name,
             statements,
@@ -90,16 +98,19 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
     }
 
     fn parse_statement(&mut self, locals: &mut Vec<&'a str>) -> Statement {
-        let tok = self.input.next();
+        let tok = self.input.peek();
 
-        let stmt = match tok.map(|t| t.kind) {
+        let stmt = match tok.map(|t| &t.kind) {
             Some(TokenKind::Keyword(Keyword::Return)) => {
+                self.input.next();
                 let expression = self.parse_expression(locals);
 
                 Statement::Return(expression)
             }
 
             Some(TokenKind::Keyword(Keyword::Int)) => {
+                self.input.next();
+
                 let ident_tok = self.input.next();
                 let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident_tok else {
                     self.emit_err_from_token("<identifier>", ident_tok);
@@ -111,7 +122,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 }
 
                 locals.push(ident);
-                let ident = locals.len();
+                let ident = locals.len() - 1;
 
                 let init = if self
                     .input
