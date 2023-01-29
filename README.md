@@ -1,5 +1,7 @@
 # 🚀 RCC (Rust C Compiler) 🚀
 
+*NOTE: The master branch is not actively developed, see the new [rewrite](https://github.com/Ezrashaw/rcc/tree/rewrite) branch with new features such as an LLVM backend (while keeping x86_64) and a C pretty printer. The rewrite branch is slightly less developed but is more polished.*
+
 ## A simple C compiler written in pure safe Rust
 
 ---
