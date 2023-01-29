@@ -42,10 +42,10 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
     }
 
     fn print_block_item(&mut self, item: &BlockItem, indent_level: u32) -> io::Result<()> {
-        self.indent(indent_level)?;
-
         match item {
             BlockItem::Declaration(var, expr) => {
+                self.indent(indent_level)?;
+
                 write!(self.buf, "int ")?;
                 self.print_variable(*var)?;
                 if let Some(expr) = expr {
@@ -55,13 +55,15 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
 
                 writeln!(self.buf, ";")?;
             }
-            BlockItem::Statement(stmt) => self.print_stmt(stmt)?,
+            BlockItem::Statement(stmt) => self.print_stmt(stmt, indent_level)?,
         }
 
         Ok(())
     }
 
-    fn print_stmt(&mut self, stmt: &Statement) -> io::Result<()> {
+    fn print_stmt(&mut self, stmt: &Statement, indent_level: u32) -> io::Result<()> {
+        self.indent(indent_level)?;
+
         match stmt {
             Statement::Return(expr) => {
                 write!(self.buf, "return ")?;
@@ -69,9 +71,27 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
             }
 
             Statement::Expression(expr) => self.print_expr(expr)?,
+            Statement::Conditional(expr, if_true, if_false) => {
+                write!(self.buf, "if (")?;
+                self.print_expr(expr)?;
+                writeln!(self.buf, ")")?;
+
+                self.print_stmt(if_true, indent_level + 1)?;
+
+                if let Some(if_false) = if_false {
+                    self.indent(indent_level)?;
+                    writeln!(self.buf, "else")?;
+
+                    self.print_stmt(if_false, indent_level + 1)?;
+                }
+            }
         };
 
-        writeln!(self.buf, ";")
+        if !matches!(stmt, Statement::Conditional(..)) {
+            writeln!(self.buf, ";")
+        } else {
+            writeln!(self.buf)
+        }
     }
 
     fn print_expr(&mut self, expr: &Expression) -> io::Result<()> {

@@ -88,6 +88,7 @@ impl Instruction {
             }
 
             Statement::Expression(expr) => Self::from_expression(buf, expr, 0, label_counter),
+            Statement::Conditional(_, _, _) => todo!(),
         }
     }
 

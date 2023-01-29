@@ -152,6 +152,32 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 Statement::Return(expression)
             }
 
+            Some(TokenKind::Keyword(Keyword::If)) => {
+                self.input.next();
+
+                self.expect_token(TokenKind::OpenParen);
+                let expr = self.parse_expression(locals);
+                self.expect_token(TokenKind::CloseParen);
+
+                let if_true = Box::new(self.parse_statement(locals));
+
+                if let Some(Token {
+                    kind: TokenKind::Keyword(Keyword::Else),
+                    ..
+                }) = self.input.peek()
+                {
+                    self.input.next();
+
+                    return Statement::Conditional(
+                        expr,
+                        if_true,
+                        Some(Box::new(self.parse_statement(locals))),
+                    );
+                } else {
+                    return Statement::Conditional(expr, if_true, None);
+                }
+            }
+
             _ => Statement::Expression(self.parse_expression(locals)),
         };
 

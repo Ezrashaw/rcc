@@ -30,6 +30,12 @@ pub enum Statement {
     ///
     /// Created from code like `2 + 2;`, used for variable assignments.
     Expression(Expression),
+
+    /// A common `if` statement.
+    ///
+    /// Contains a controlling expression, a `true` branch and an optional
+    /// `false` branch.
+    Conditional(Expression, Box<Statement>, Option<Box<Statement>>),
 }
 
 #[derive(Debug)]
