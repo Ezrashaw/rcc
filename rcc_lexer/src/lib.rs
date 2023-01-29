@@ -19,6 +19,8 @@ pub enum TokenKind<'a> {
     OpenParen,
     CloseParen,
     Semicolon,
+    Colon,
+    Comma,
 
     // operators
     Minus,
@@ -28,6 +30,7 @@ pub enum TokenKind<'a> {
     Star,
     Slash,
     Equals,
+    QuestionMark,
 
     DoubleAnd,
     DoublePipe,
@@ -50,7 +53,15 @@ pub enum Keyword {
     // types
     Int,
 
+    // control flow
     Return,
+    If,
+    Else,
+    For,
+    While,
+    Do,
+    Break,
+    Continue,
 }
 
 const_tokens! {
@@ -60,6 +71,8 @@ const_tokens! {
     "(" => TokenKind::OpenParen,
     ")" => TokenKind::CloseParen,
     ";" => TokenKind::Semicolon,
+    ":" => TokenKind::Colon,
+    "," => TokenKind::Comma,
 
     // operators
     "-" => TokenKind::Minus,
@@ -67,6 +80,7 @@ const_tokens! {
     "+" => TokenKind::Plus,
     "*" => TokenKind::Star,
     "/" => TokenKind::Slash,
+    "?" => TokenKind::QuestionMark,
 
     // double-char operators
     "&&" => TokenKind::DoubleAnd,
@@ -92,6 +106,13 @@ multi_char_tokens! {
             match slice {
                 "int" => TokenKind::Keyword(Keyword::Int),
                 "return" => TokenKind::Keyword(Keyword::Return),
+                "if" => TokenKind::Keyword(Keyword::If),
+                "else" => TokenKind::Keyword(Keyword::Else),
+                "for" => TokenKind::Keyword(Keyword::For),
+                "while" => TokenKind::Keyword(Keyword::While),
+                "do" => TokenKind::Keyword(Keyword::Do),
+                "break" => TokenKind::Keyword(Keyword::Break),
+                "continue" => TokenKind::Keyword(Keyword::Continue),
 
                 _ => TokenKind::Ident(slice)
             }
