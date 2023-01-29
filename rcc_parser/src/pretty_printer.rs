@@ -2,7 +2,7 @@ use std::io::{self, Write};
 
 use rcc_structures::{BinOp, UnaryOp};
 
-use crate::ast::Function;
+use crate::ast::{BlockItem, Function};
 
 use super::ast::{Expression, Program, Statement};
 
@@ -34,29 +34,40 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
     fn print_fn(&mut self, function: &Function) -> io::Result<()> {
         writeln!(self.buf, "int {}() {{", function.name)?;
 
-        for stmt in &function.statements {
-            self.print_stmt(&stmt, 1)?;
+        for item in &function.block_items {
+            self.print_block_item(&item, 1)?;
         }
 
         writeln!(self.buf, "}}")
     }
 
-    fn print_stmt(&mut self, stmt: &Statement, ident_level: u32) -> io::Result<()> {
-        self.indent(ident_level)?;
+    fn print_block_item(&mut self, item: &BlockItem, indent_level: u32) -> io::Result<()> {
+        self.indent(indent_level)?;
 
-        match stmt {
-            Statement::Return(expr) => {
-                write!(self.buf, "return ")?;
-                self.print_expr(expr)?;
-            }
-            Statement::Declaration(var, expr) => {
+        match item {
+            BlockItem::Declaration(var, expr) => {
                 write!(self.buf, "int ")?;
                 self.print_variable(*var)?;
                 if let Some(expr) = expr {
                     write!(self.buf, " = ")?;
                     self.print_expr(expr)?;
                 }
+
+                writeln!(self.buf, ";")?;
             }
+            BlockItem::Statement(stmt) => self.print_stmt(stmt)?,
+        }
+
+        Ok(())
+    }
+
+    fn print_stmt(&mut self, stmt: &Statement) -> io::Result<()> {
+        match stmt {
+            Statement::Return(expr) => {
+                write!(self.buf, "return ")?;
+                self.print_expr(expr)?;
+            }
+
             Statement::Expression(expr) => self.print_expr(expr)?,
         };
 

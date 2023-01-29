@@ -8,7 +8,7 @@ use self::ast::{Expression, Program, Statement};
 pub mod ast;
 pub mod pretty_printer;
 
-use ast::Function;
+use ast::{BlockItem, Function};
 use peekmore::{PeekMore, PeekMoreIterator};
 use rcc_error::SpannedError;
 use rcc_lexer::{Keyword, Token, TokenKind};
@@ -70,44 +70,39 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         self.expect_token(TokenKind::CloseParen);
         self.expect_token(TokenKind::OpenBrace);
 
-        let mut statements = Vec::new();
+        let mut block_items = Vec::new();
         let mut locals = Vec::new();
         while self
             .input
             .peek()
             .map_or(false, |tk| tk.kind != TokenKind::CloseBrace)
         {
-            statements.push(self.parse_statement(&mut locals));
+            block_items.push(self.parse_block_item(&mut locals));
         }
 
         self.expect_token(TokenKind::CloseBrace);
 
         // Ensure that we have a return statement somewhere, if not, add one.
-        if !statements
+        if !block_items
             .iter()
-            .any(|stmt| matches!(stmt, Statement::Return(_)))
+            .any(|stmt| matches!(stmt, BlockItem::Statement(Statement::Return(_))))
         {
-            statements.push(Statement::Return(Expression::Literal { val: 0 }));
+            block_items.push(BlockItem::Statement(Statement::Return(
+                Expression::Literal { val: 0 },
+            )));
         }
 
         Function {
             name,
-            statements,
+            block_items,
             locals,
         }
     }
 
-    fn parse_statement(&mut self, locals: &mut Vec<&'a str>) -> Statement {
+    fn parse_block_item(&mut self, locals: &mut Vec<&'a str>) -> BlockItem {
         let tok = self.input.peek();
 
-        let stmt = match tok.map(|t| &t.kind) {
-            Some(TokenKind::Keyword(Keyword::Return)) => {
-                self.input.next();
-                let expression = self.parse_expression(locals);
-
-                Statement::Return(expression)
-            }
-
+        match tok.map(|t| &t.kind) {
             Some(TokenKind::Keyword(Keyword::Int)) => {
                 self.input.next();
 
@@ -137,7 +132,24 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                     None
                 };
 
-                Statement::Declaration(ident as u32, init)
+                self.expect_token(TokenKind::Semicolon);
+
+                BlockItem::Declaration(ident as u32, init)
+            }
+
+            _ => BlockItem::Statement(self.parse_statement(locals)),
+        }
+    }
+
+    fn parse_statement(&mut self, locals: &mut Vec<&'a str>) -> Statement {
+        let tok = self.input.peek();
+
+        let stmt = match tok.map(|t| &t.kind) {
+            Some(TokenKind::Keyword(Keyword::Return)) => {
+                self.input.next();
+                let expression = self.parse_expression(locals);
+
+                Statement::Return(expression)
             }
 
             _ => Statement::Expression(self.parse_expression(locals)),

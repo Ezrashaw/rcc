@@ -1,4 +1,4 @@
-use rcc_parser::ast::{Expression, Function, Statement};
+use rcc_parser::ast::{BlockItem, Expression, Function, Statement};
 use rcc_structures::{BinOp, UnaryOp};
 
 /// Bytecode instruction used by `rcc` internally.
@@ -64,11 +64,20 @@ impl Instruction {
     pub(crate) fn from_function(function: &Function, label_counter: &mut u32) -> Vec<Self> {
         let mut buf = Vec::new();
 
-        for stmt in &function.statements {
-            Self::from_statement(&mut buf, stmt, label_counter);
+        for item in &function.block_items {
+            Self::from_block_item(&mut buf, item, label_counter);
         }
 
         buf
+    }
+
+    fn from_block_item(buf: &mut Vec<Self>, item: &BlockItem, label_counter: &mut u32) {
+        match item {
+            BlockItem::Declaration(id, val) => {
+                Self::from_declaration(buf, *id, val.as_ref(), label_counter)
+            }
+            BlockItem::Statement(stmt) => Self::from_statement(buf, stmt, label_counter),
+        }
     }
 
     fn from_statement(buf: &mut Vec<Self>, statement: &Statement, label_counter: &mut u32) {
@@ -77,9 +86,7 @@ impl Instruction {
                 Self::from_expression(buf, val, 0, label_counter);
                 buf.push(Instruction::Return);
             }
-            Statement::Declaration(id, val) => {
-                Self::from_declaration(buf, *id, val.as_ref(), label_counter)
-            }
+
             Statement::Expression(expr) => Self::from_expression(buf, expr, 0, label_counter),
         }
     }

@@ -1,4 +1,4 @@
-use rcc_parser::ast::{Expression, Program, Statement};
+use rcc_parser::ast::{BlockItem, Expression, Program, Statement};
 use rcc_structures::{BinOp, UnaryOp};
 
 pub struct ConstantFolder<'a> {
@@ -11,21 +11,28 @@ impl<'a> ConstantFolder<'a> {
     }
 
     pub fn optimize(mut self) -> Program<'a> {
-        for stmt in &mut self.ast.function.statements {
-            match stmt {
-                Statement::Return(ref mut expr) => Self::constify_expr_or_inner(expr),
-                Statement::Declaration(_, Some(ref mut expr)) => Self::constify_expr_or_inner(expr),
-                Statement::Expression(ref mut expr) => Self::constify_expr_or_inner(expr),
+        for item in &mut self.ast.function.block_items {
+            match item {
+                BlockItem::Statement(Statement::Return(ref mut expr)) => {
+                    Self::constify_expr_or_inner(expr)
+                }
+                BlockItem::Statement(Statement::Expression(ref mut expr)) => {
+                    Self::constify_expr_or_inner(expr)
+                }
+
+                BlockItem::Declaration(_, Some(ref mut expr)) => Self::constify_expr_or_inner(expr),
 
                 _ => (),
             }
         }
 
         // remove useless statements
-        self.ast
-            .function
-            .statements
-            .retain(|stmt| !matches!(stmt, Statement::Expression(Expression::Literal { .. })));
+        self.ast.function.block_items.retain(|stmt| {
+            !matches!(
+                stmt,
+                BlockItem::Statement(Statement::Expression(Expression::Literal { .. }))
+            )
+        });
 
         self.ast
     }

@@ -7,19 +7,24 @@ pub struct Program<'a> {
 #[derive(Debug)]
 pub struct Function<'a> {
     pub name: &'a str,
-    pub statements: Vec<Statement>,
+    pub block_items: Vec<BlockItem>,
     pub locals: Vec<&'a str>,
 }
 
 #[derive(Debug)]
-pub enum Statement {
-    Return(Expression),
-
+pub enum BlockItem {
     /// Variable definition.
     ///
     /// Indexes into [`Function`]s vector of local identifiers.
     /// Contains an optional initializer.
     Declaration(u32, Option<Expression>),
+
+    Statement(Statement),
+}
+
+#[derive(Debug)]
+pub enum Statement {
+    Return(Expression),
 
     /// Standalone expression.
     ///
