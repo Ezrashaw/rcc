@@ -127,9 +127,9 @@ fn compile_program_verbose(input: &str) -> String {
         println!("======================");
     }
 
-    let bytecode = Bytecode::from_ast(&ast);
-    println!("===== BYTECODE (for only function) ====");
-    for instruction in bytecode.function().1 {
+    let bytecode = Bytecode::from_function(&ast.function);
+    println!("===== BYTECODE (for `{}`) ====", bytecode.fn_name());
+    for instruction in bytecode.instructions() {
         println!("{instruction:?}");
     }
     println!("===================");
@@ -161,7 +161,7 @@ fn compile_program(input: &str) -> String {
         ast
     };
 
-    let bytecode = Bytecode::from_ast(&ast);
+    let bytecode = Bytecode::from_function(&ast.function);
 
     if USE_LLVM {
         LlvmBackend::gen_llvm(&bytecode)

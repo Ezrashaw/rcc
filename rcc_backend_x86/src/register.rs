@@ -15,8 +15,8 @@ pub(crate) enum Register {
     Stack,
 }
 
-impl From<&u8> for Register {
-    fn from(value: &u8) -> Self {
+impl Register {
+    pub(crate) fn from_u8(value: u8) -> Self {
         match value {
             0 => Register::ECX,
             1 => Register::R8,

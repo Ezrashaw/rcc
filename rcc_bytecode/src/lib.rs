@@ -1,28 +1,51 @@
-use rcc_parser::ast::Program;
+#![feature(let_chains)]
+
+use rcc_parser::ast::Function;
 
 mod instruction;
+mod lowering;
+mod utils;
 
-pub use instruction::Instruction;
+pub use instruction::{Instruction, ReadLocation, WriteLocation};
 
+/// `rcc` intermediate representation.
+///
+/// Generated per-function, contains a [`Vec<Instruction>`] which is the
+/// lowered AST for that function.
+///
+/// Use the [`Bytecode::from_function`] method to generate bytecode for a
+/// function.
 #[derive(Debug)]
 pub struct Bytecode<'a> {
-    functions: Vec<(&'a str, Vec<Instruction>)>,
+    // "public" fields
+    fn_name: &'a str,
+    instr: Vec<Instruction>,
+
+    // "internal" fields
+    label_counter: u32,
+    // FIXME: come up with some algorithim or something to remove this vec
+    allocated_registers: Vec<WriteLocation>,
 }
 
 impl<'a> Bytecode<'a> {
-    pub fn from_ast(ast: &Program<'a>) -> Self {
-        let mut label_counter = 0;
+    pub fn from_function(function: &Function<'a>) -> Self {
+        let mut bytecode = Self {
+            fn_name: function.name,
+            instr: Vec::new(),
+            label_counter: 0,
+            allocated_registers: Vec::new(),
+        };
 
-        let function = Instruction::from_function(&ast.function, &mut label_counter);
+        bytecode.append_from_function(function);
 
-        Self {
-            functions: vec![(ast.function.name, function)],
-        }
+        bytecode
     }
 
-    pub fn function(&self) -> (&str, &[Instruction]) {
-        let function = self.functions.first().unwrap();
+    pub fn fn_name(&self) -> &'a str {
+        &self.fn_name
+    }
 
-        (function.0, &function.1)
+    pub fn instructions(&self) -> &[Instruction] {
+        &self.instr
     }
 }
