@@ -141,6 +141,7 @@ impl Instruction {
             Expression::Variable { identifier } => {
                 buf.push(Instruction::LoadVariable(*identifier, reg))
             }
+            Expression::TernaryConditional { .. } => todo!(),
         }
     }
 

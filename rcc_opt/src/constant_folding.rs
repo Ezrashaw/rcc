@@ -85,6 +85,7 @@ impl<'a> ConstantFolder<'a> {
             Expression::Literal { val } => Some(*val as i32),
             Expression::Assignment { .. } => None,
             Expression::Variable { .. } => None,
+            Expression::TernaryConditional { .. } => None,
         }
     }
 }

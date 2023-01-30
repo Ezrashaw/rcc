@@ -61,4 +61,9 @@ pub enum Expression {
     Variable {
         identifier: u32,
     },
+    TernaryConditional {
+        controlling: Box<Expression>,
+        if_true: Box<Expression>,
+        if_false: Box<Expression>,
+    },
 }

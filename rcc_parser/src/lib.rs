@@ -205,7 +205,31 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 expression: Box::new(expression),
             }
         } else {
-            *self.parse_binop(locals)
+            self.parse_ternary(locals)
+        }
+    }
+
+    fn parse_ternary(&mut self, locals: &mut Vec<&'a str>) -> Expression {
+        let expr = self.parse_binop(locals);
+
+        if let Some(Token {
+            kind: TokenKind::QuestionMark,
+            ..
+        }) = self.input.peek()
+        {
+            self.input.next();
+
+            let if_true = Box::new(self.parse_expression(locals));
+            self.expect_token(TokenKind::Colon);
+            let if_false = Box::new(self.parse_ternary(locals));
+
+            Expression::TernaryConditional {
+                controlling: expr,
+                if_true,
+                if_false,
+            }
+        } else {
+            *expr
         }
     }
 

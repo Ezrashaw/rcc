@@ -156,6 +156,19 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
                 self.print_expr(expression)
             }
             Expression::Variable { identifier } => self.print_variable(*identifier),
+            Expression::TernaryConditional {
+                controlling,
+                if_true,
+                if_false,
+            } => {
+                self.print_expr(controlling)?;
+                write!(self.buf, " ? ")?;
+
+                self.print_expr(if_true)?;
+                write!(self.buf, " : ")?;
+
+                self.print_expr(if_false)
+            }
         }
     }
 }
