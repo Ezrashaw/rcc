@@ -51,6 +51,21 @@ impl<'a> ConstantFolder<'a> {
                     Self::constify_expr_or_inner(rhs);
                 }
                 Expression::UnaryOp { expr, .. } => Self::constify_expr_or_inner(expr),
+
+                Expression::Assignment { expression, .. } => {
+                    Self::constify_expr_or_inner(expression)
+                }
+
+                Expression::TernaryConditional {
+                    controlling,
+                    if_true,
+                    if_false,
+                } => {
+                    Self::constify_expr_or_inner(controlling);
+                    Self::constify_expr_or_inner(if_true);
+                    Self::constify_expr_or_inner(if_false);
+                }
+
                 _ => (),
             }
         }
@@ -67,25 +82,41 @@ impl<'a> ConstantFolder<'a> {
                     BinOp::Sub => Some(lhs - rhs),
                     BinOp::Mul => Some(lhs * rhs),
                     BinOp::Div => Some(lhs / rhs),
-                    BinOp::LogicalOr => None,
-                    BinOp::LogicalAnd => None,
-                    BinOp::Equals => None,
-                    BinOp::NotEquals => None,
-                    BinOp::LessThan => None,
-                    BinOp::LessThanOrEquals => None,
-                    BinOp::GreaterThan => None,
-                    BinOp::GreaterThanOrEquals => None,
+                    BinOp::LogicalOr => Some(((lhs != 0) || (rhs != 0)) as i32),
+                    BinOp::LogicalAnd => Some(((lhs != 0) && (rhs != 0)) as i32),
+                    BinOp::Equals => Some((lhs == rhs) as i32),
+                    BinOp::NotEquals => Some((lhs != rhs) as i32),
+                    BinOp::LessThan => Some((lhs < rhs) as i32),
+                    BinOp::LessThanOrEquals => Some((lhs <= rhs) as i32),
+                    BinOp::GreaterThan => Some((lhs > rhs) as i32),
+                    BinOp::GreaterThanOrEquals => Some((lhs >= rhs) as i32),
                 }
             }
             Expression::UnaryOp { expr, op } => match op {
                 UnaryOp::Negation => Some(-Self::get_const_value(expr)?),
-                UnaryOp::BitwiseComplement => None,
-                UnaryOp::LogicalNegation => None,
+                UnaryOp::BitwiseComplement => Some(!Self::get_const_value(expr)?),
+                UnaryOp::LogicalNegation => Some(if Self::get_const_value(expr)? == 0 {
+                    1
+                } else {
+                    0
+                }),
             },
             Expression::Literal { val } => Some(*val as i32),
             Expression::Assignment { .. } => None,
             Expression::Variable { .. } => None,
-            Expression::TernaryConditional { .. } => None,
+            Expression::TernaryConditional {
+                controlling,
+                if_true,
+                if_false,
+            } => {
+                let controlling = Self::get_const_value(controlling)? != 0;
+
+                if controlling {
+                    Some(Self::get_const_value(if_true)?)
+                } else {
+                    Some(Self::get_const_value(if_false)?)
+                }
+            }
         }
     }
 }
