@@ -6,7 +6,7 @@ use crate::{Bytecode, Instruction, ReadLocation};
 /// Defines `append_from_*` methods, used internally to lower from AST.
 impl Bytecode<'_> {
     pub(crate) fn append_from_function(&mut self, function: &Function) {
-        for item in &function.block_items {
+        for item in &function.block.block_items {
             self.append_from_block_item(item);
         }
     }

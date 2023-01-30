@@ -11,7 +11,7 @@ impl<'a> ConstantFolder<'a> {
     }
 
     pub fn optimize(mut self) -> Program<'a> {
-        for item in &mut self.ast.function.block_items {
+        for item in &mut self.ast.function.block.block_items {
             match item {
                 BlockItem::Statement(Statement::Return(ref mut expr)) => {
                     Self::constify_expr_or_inner(expr)
@@ -27,7 +27,7 @@ impl<'a> ConstantFolder<'a> {
         }
 
         // remove useless statements
-        self.ast.function.block_items.retain(|stmt| {
+        self.ast.function.block.block_items.retain(|stmt| {
             !matches!(
                 stmt,
                 BlockItem::Statement(Statement::Expression(Expression::Literal { .. }))

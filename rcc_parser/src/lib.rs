@@ -8,7 +8,7 @@ use self::ast::{Expression, Program, Statement};
 pub mod ast;
 pub mod pretty_printer;
 
-use ast::{BlockItem, Function};
+use ast::{Block, BlockItem, Function};
 use peekmore::{PeekMore, PeekMoreIterator};
 use rcc_error::SpannedError;
 use rcc_lexer::{Keyword, Token, TokenKind};
@@ -68,6 +68,13 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
         self.expect_token(TokenKind::OpenParen);
         self.expect_token(TokenKind::CloseParen);
+
+        let block = self.parse_block();
+
+        Function { name, block }
+    }
+
+    fn parse_block(&mut self) -> Block<'a> {
         self.expect_token(TokenKind::OpenBrace);
 
         let mut block_items = Vec::new();
@@ -92,10 +99,10 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
             )));
         }
 
-        Function {
-            name,
+        Block {
             block_items,
-            locals,
+            variables: locals,
+            parent: None,
         }
     }
 

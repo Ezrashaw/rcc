@@ -2,7 +2,7 @@ use std::io::{self, Write};
 
 use rcc_structures::{BinOp, UnaryOp};
 
-use crate::ast::{BlockItem, Function};
+use crate::ast::{Block, BlockItem, Function};
 
 use super::ast::{Expression, Program, Statement};
 
@@ -22,7 +22,7 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
 
     fn print_variable(&mut self, var: u32) -> io::Result<()> {
         // FIXME: we won't always just have one function!
-        let name = self.ast.function.locals[var as usize];
+        let name = self.ast.function.block.variables[var as usize];
 
         write!(self.buf, "{name}")
     }
@@ -32,9 +32,15 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
     }
 
     fn print_fn(&mut self, function: &Function) -> io::Result<()> {
-        writeln!(self.buf, "int {}() {{", function.name)?;
+        write!(self.buf, "int {}() ", function.name)?;
 
-        for item in &function.block_items {
+        self.print_block(&function.block)
+    }
+
+    fn print_block(&mut self, block: &Block) -> io::Result<()> {
+        writeln!(self.buf, "{{")?;
+
+        for item in &block.block_items {
             self.print_block_item(&item, 1)?;
         }
 

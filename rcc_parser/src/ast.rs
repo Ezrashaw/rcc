@@ -7,8 +7,15 @@ pub struct Program<'a> {
 #[derive(Debug)]
 pub struct Function<'a> {
     pub name: &'a str,
+    pub block: Block<'a>,
+}
+
+#[derive(Debug)]
+// FIXME: scope should be seperated for global variables
+pub struct Block<'a> {
     pub block_items: Vec<BlockItem>,
-    pub locals: Vec<&'a str>,
+    pub variables: Vec<&'a str>,
+    pub parent: Option<&'a Block<'a>>,
 }
 
 #[derive(Debug)]
