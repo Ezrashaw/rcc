@@ -102,7 +102,7 @@ fn compile_program_verbose(input: &str) -> String {
     println!("==============");
 
     let parser = Parser::new(lexer);
-    let ast = parser.parse();
+    let mut ast = parser.parse();
 
     println!("===== AST =====");
     println!("{ast:#?}");
@@ -112,12 +112,8 @@ fn compile_program_verbose(input: &str) -> String {
     PrettyPrinter::new(&mut stdout(), &ast).print().unwrap();
     println!("==================");
 
-    let ast = if OPTIMIZE {
-        rcc_opt::ConstantFolder::new(ast).optimize()
-    } else {
-        ast
-    };
     if OPTIMIZE {
+        rcc_opt::optimize_ast(&mut ast);
         println!("===== OPTIMIZED =====");
         println!("{ast:#?}");
         println!("=====================");
@@ -153,13 +149,11 @@ fn compile_program(input: &str) -> String {
     let lexer = Lexer::new(input);
 
     let parser = Parser::new(lexer);
-    let ast = parser.parse();
+    let mut ast = parser.parse();
 
-    let ast = if OPTIMIZE {
-        rcc_opt::ConstantFolder::new(ast).optimize()
-    } else {
-        ast
-    };
+    if OPTIMIZE {
+        rcc_opt::optimize_ast(&mut ast);
+    }
 
     let bytecode = Bytecode::from_function(&ast.function);
 
