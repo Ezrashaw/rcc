@@ -58,6 +58,24 @@ pub enum Instruction {
     /// Uses the same logic as [`Instruction::AssignVariable`] for finding
     /// stack offsets.
     LoadVariable(u32, u8),
+
+    /// Checks the given register and either jumps to the false branch or falls
+    /// through to the true branch.
+    IfThen(u32, u8),
+
+    /// An instruction which comes after a if statement, it jumps over the else
+    /// statement (jumps to the [`Instruction::PostConditionalDummy`]).
+    ///
+    /// Also specifies the start of the false branch, jumped to by
+    /// [`Instruction::IfThen`].
+    PostIf(u32, u32),
+
+    /// An instruction which specifies where [`Instruction::PostIf`] or
+    /// [`Instruction::IfThen`] should jump to, it appears after a conditional
+    /// statement.
+    // FIXME: remove this, we could fix this with instruction addressing
+    //        instead of the ad-hoc allocation currently.
+    PostConditionalDummy(u32),
 }
 
 impl Instruction {
@@ -88,7 +106,13 @@ impl Instruction {
             }
 
             Statement::Expression(expr) => Self::from_expression(buf, expr, 0, label_counter),
-            Statement::Conditional(_, _, _) => todo!(),
+            Statement::Conditional(expr, true_branch, false_branch) => Self::from_conditional(
+                buf,
+                expr,
+                true_branch,
+                false_branch.as_deref(),
+                label_counter,
+            ),
         }
     }
 
@@ -179,5 +203,37 @@ impl Instruction {
         }
 
         buf.push(Instruction::DeclareVariable(id, REGISTER))
+    }
+
+    fn from_conditional(
+        buf: &mut Vec<Self>,
+        expr: &Expression,
+        true_branch: &Statement,
+        false_branch: Option<&Statement>,
+        label_counter: &mut u32,
+    ) {
+        Self::from_expression(buf, expr, 0, label_counter);
+
+        if let Some(false_branch) = false_branch {
+            *label_counter += 2;
+            let post_else = *label_counter - 1;
+            let pre_else = *label_counter - 2;
+
+            buf.push(Instruction::IfThen(pre_else, 0));
+
+            Self::from_statement(buf, true_branch, label_counter);
+            buf.push(Instruction::PostIf(post_else, pre_else));
+
+            Self::from_statement(buf, false_branch, label_counter);
+            buf.push(Instruction::PostConditionalDummy(post_else));
+        } else {
+            *label_counter += 1;
+            let post_conditional = *label_counter - 1;
+
+            buf.push(Instruction::IfThen(post_conditional, 0));
+
+            Self::from_statement(buf, true_branch, label_counter);
+            buf.push(Instruction::PostConditionalDummy(post_conditional));
+        }
     }
 }

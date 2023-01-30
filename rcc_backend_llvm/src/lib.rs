@@ -74,6 +74,9 @@ impl LlvmBackend {
             Instruction::DeclareVariable(_, _) => todo!(),
             Instruction::AssignVariable(_, _) => todo!(),
             Instruction::LoadVariable(_, _) => todo!(),
+            Instruction::IfThen(_, _) => todo!(),
+            Instruction::PostIf(_, _) => todo!(),
+            Instruction::PostConditionalDummy(_) => todo!(),
         }
 
         writeln!(self.buf)

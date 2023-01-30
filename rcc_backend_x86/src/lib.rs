@@ -112,6 +112,18 @@ impl X86Backend {
                 (var + 1) * 4,
                 <&u8 as Into<Register>>::into(reg)
             )?,
+
+            Instruction::IfThen(pre_else, reg) => writeln!(
+                self.buf,
+                "cmpl $0, %{}\n{}je _{pre_else}",
+                <&u8 as Into<Register>>::into(reg),
+                self.indent()
+            )?,
+            Instruction::PostIf(post_else, pre_else) => {
+                writeln!(self.buf, "jmp _{post_else}\n_{pre_else}:")?
+            }
+            // FIXME: gah, this messes up the formatting
+            Instruction::PostConditionalDummy(post_else) => writeln!(self.buf, "_{post_else}:")?,
         }
 
         writeln!(self.buf)
