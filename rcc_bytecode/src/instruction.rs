@@ -141,7 +141,26 @@ impl Instruction {
             Expression::Variable { identifier } => {
                 buf.push(Instruction::LoadVariable(*identifier, reg))
             }
-            Expression::TernaryConditional { .. } => todo!(),
+            Expression::TernaryConditional {
+                controlling,
+                if_true,
+                if_false,
+            } => {
+                // FIXME: duplicated from conditionals below
+                Self::from_expression(buf, controlling, reg, label_counter);
+
+                *label_counter += 2;
+                let post_else = *label_counter - 1;
+                let pre_else = *label_counter - 2;
+
+                buf.push(Instruction::IfThen(pre_else, 0));
+
+                Self::from_expression(buf, if_true, reg, label_counter);
+                buf.push(Instruction::PostIf(post_else, pre_else));
+
+                Self::from_expression(buf, if_false, reg, label_counter);
+                buf.push(Instruction::PostConditionalDummy(post_else));
+            }
         }
     }
 
