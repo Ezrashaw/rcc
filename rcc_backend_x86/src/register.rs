@@ -1,5 +1,6 @@
 use std::fmt::{self, Display};
 
+#[allow(clippy::upper_case_acronyms)]
 pub(crate) enum Register {
     ECX,
     R8,

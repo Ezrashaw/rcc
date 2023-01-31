@@ -44,7 +44,7 @@ impl X86Backend {
     }
 
     fn write_function(&mut self, name: &str, bytecode: &[Instruction]) -> fmt::Result {
-        writeln!(self.buf, ".globl {}\n{0}:", name)?;
+        writeln!(self.buf, ".globl {name}\n{name}:")?;
 
         self.indent_lvl = 1;
 
@@ -68,7 +68,7 @@ impl X86Backend {
 
         match instruction {
             Instruction::LoadInt(val, reg) => {
-                writeln!(self.buf, "movl ${val}, %{}", Register::from_u8(reg.reg()))?
+                writeln!(self.buf, "movl ${val}, %{}", Register::from_u8(reg.reg()))?;
             }
 
             Instruction::Return(loc) => writeln!(
@@ -80,8 +80,8 @@ impl X86Backend {
                 Self::rloc_to_asm(loc),
             )?,
 
-            Instruction::BinaryOp(op, lhs, rhs) => self.write_binop(op, lhs, rhs)?,
-            Instruction::UnaryOp(op, loc) => self.write_unary_op(op, loc)?,
+            Instruction::BinaryOp(op, lhs, rhs) => self.write_binop(*op, lhs, rhs)?,
+            Instruction::UnaryOp(op, loc) => self.write_unary_op(*op, loc)?,
 
             Instruction::ShortCircuit(rloc, should_short, jump_loc) => writeln!(
                 self.buf,
@@ -121,7 +121,7 @@ impl X86Backend {
                 self.indent()
             )?,
             Instruction::PostIf(post_else, pre_else) => {
-                writeln!(self.buf, "jmp _{post_else}\n_{pre_else}:")?
+                writeln!(self.buf, "jmp _{post_else}\n_{pre_else}:")?;
             }
             // FIXME: gah, this messes up the formatting
             Instruction::PostConditionalDummy(post_else) => writeln!(self.buf, "_{post_else}:")?,
@@ -130,7 +130,7 @@ impl X86Backend {
         writeln!(self.buf)
     }
 
-    fn write_unary_op(&mut self, op: &UnaryOp, wloc: &WriteLocation) -> fmt::Result {
+    fn write_unary_op(&mut self, op: UnaryOp, wloc: &WriteLocation) -> fmt::Result {
         let wloc_str = Self::wloc_to_asm(wloc);
         match op {
             UnaryOp::Negation => writeln!(self.buf, "neg {wloc_str}"),
@@ -145,7 +145,7 @@ impl X86Backend {
         }
     }
 
-    fn write_binop(&mut self, op: &BinOp, lhs: &WriteLocation, rhs: &ReadLocation) -> fmt::Result {
+    fn write_binop(&mut self, op: BinOp, lhs: &WriteLocation, rhs: &ReadLocation) -> fmt::Result {
         let lhs_str = Self::wloc_to_asm(lhs);
         let rhs_str = Self::rloc_to_asm(rhs);
         match op {
@@ -185,7 +185,7 @@ impl X86Backend {
         }
     }
 
-    fn get_relational_instruction(op: &BinOp) -> &'static str {
+    fn get_relational_instruction(op: BinOp) -> &'static str {
         match op {
             BinOp::Equals => "e",
             BinOp::NotEquals => "ne",

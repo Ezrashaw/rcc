@@ -24,7 +24,7 @@ impl OptimizationPass for VariableInliner {
                 self.inlined.insert(*id, *val);
                 *item =
                     BlockItem::Statement(Statement::Expression(Expression::Literal { val: *val }));
-            } else if let None = val {
+            } else if val.is_none() {
                 // variables are init'ed to 0 implicitly
                 self.inlined.insert(*id, 0);
                 *item = BlockItem::Statement(Statement::Expression(Expression::Literal { val: 0 }));
@@ -34,7 +34,7 @@ impl OptimizationPass for VariableInliner {
 
     fn opt_expression(&mut self, expr: &mut Expression) {
         if let Expression::Variable { identifier } = expr {
-            if let Some(val) = self.inlined.get(&identifier) {
+            if let Some(val) = self.inlined.get(identifier) {
                 *expr = Expression::Literal { val: *val };
             }
         } else if let Expression::Assignment {
@@ -43,7 +43,7 @@ impl OptimizationPass for VariableInliner {
         } = expr
         {
             if let Expression::Literal { val } = init.as_ref() {
-                *self.inlined.get_mut(&identifier).expect("internal error") = *val;
+                *self.inlined.get_mut(identifier).expect("internal error") = *val;
 
                 *expr = Expression::Literal { val: *val };
             }

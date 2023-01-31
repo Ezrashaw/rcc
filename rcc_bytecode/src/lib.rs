@@ -42,7 +42,7 @@ impl<'a> Bytecode<'a> {
     }
 
     pub fn fn_name(&self) -> &'a str {
-        &self.fn_name
+        self.fn_name
     }
 
     pub fn instructions(&self) -> &[Instruction] {

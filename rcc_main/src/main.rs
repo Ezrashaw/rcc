@@ -23,7 +23,8 @@ fn main() {
             (input, None)
         }
         Some(path) => (
-            std::fs::read_to_string(path).expect(&format!("failed to read input file! {path}")),
+            std::fs::read_to_string(path)
+                .unwrap_or_else(|_| panic!("failed to read input file! {path}")),
             Some(path),
         ),
         None => {
@@ -130,7 +131,7 @@ fn compile_program_verbose(input: &str) -> String {
     }
     println!("===================");
 
-    let asm = if USE_LLVM {
+    let assembly = if USE_LLVM {
         LlvmBackend::gen_llvm(&bytecode)
     } else {
         X86Backend::gen_x86(&bytecode)
@@ -139,10 +140,10 @@ fn compile_program_verbose(input: &str) -> String {
         "===== {} =====",
         if USE_LLVM { "LLVM IR" } else { "x86 ASM" }
     );
-    print!("{}", asm);
+    print!("{assembly}");
     println!("===================");
 
-    asm
+    assembly
 }
 
 fn compile_program(input: &str) -> String {

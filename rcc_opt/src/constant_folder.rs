@@ -25,28 +25,22 @@ impl ConstantFolder {
                     BinOp::Sub => Some(lhs - rhs),
                     BinOp::Mul => Some(lhs * rhs),
                     BinOp::Div => Some(lhs / rhs),
-                    BinOp::LogicalOr => Some(((lhs != 0) || (rhs != 0)) as i32),
-                    BinOp::LogicalAnd => Some(((lhs != 0) && (rhs != 0)) as i32),
-                    BinOp::Equals => Some((lhs == rhs) as i32),
-                    BinOp::NotEquals => Some((lhs != rhs) as i32),
-                    BinOp::LessThan => Some((lhs < rhs) as i32),
-                    BinOp::LessThanOrEquals => Some((lhs <= rhs) as i32),
-                    BinOp::GreaterThan => Some((lhs > rhs) as i32),
-                    BinOp::GreaterThanOrEquals => Some((lhs >= rhs) as i32),
+                    BinOp::LogicalOr => Some(i32::from((lhs != 0) || (rhs != 0))),
+                    BinOp::LogicalAnd => Some(i32::from((lhs != 0) && (rhs != 0))),
+                    BinOp::Equals => Some(i32::from(lhs == rhs)),
+                    BinOp::NotEquals => Some(i32::from(lhs != rhs)),
+                    BinOp::LessThan => Some(i32::from(lhs < rhs)),
+                    BinOp::LessThanOrEquals => Some(i32::from(lhs <= rhs)),
+                    BinOp::GreaterThan => Some(i32::from(lhs > rhs)),
+                    BinOp::GreaterThanOrEquals => Some(i32::from(lhs >= rhs)),
                 }
             }
             Expression::UnaryOp { expr, op } => match op {
                 UnaryOp::Negation => Some(-Self::get_const_value(expr)?),
                 UnaryOp::BitwiseComplement => Some(!Self::get_const_value(expr)?),
-                UnaryOp::LogicalNegation => Some(if Self::get_const_value(expr)? == 0 {
-                    1
-                } else {
-                    0
-                }),
+                UnaryOp::LogicalNegation => Some(i32::from(Self::get_const_value(expr)? == 0)),
             },
-            Expression::Literal { val } => Some(*val as i32),
-            Expression::Assignment { .. } => None,
-            Expression::Variable { .. } => None,
+            Expression::Literal { val } => Some(*val),
             Expression::TernaryConditional {
                 controlling,
                 if_true,
@@ -60,6 +54,7 @@ impl ConstantFolder {
                     Some(Self::get_const_value(if_false)?)
                 }
             }
+            Expression::Assignment { .. } | Expression::Variable { .. } => None,
         }
     }
 }

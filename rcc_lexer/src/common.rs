@@ -43,9 +43,7 @@ impl<'a> Lexer<'a> {
             None
         } else {
             Some(
-                std::str::from_utf8(
-                    &self.input.as_bytes()[self.pos as usize..(self.pos as usize + len)],
-                )
+                Some(&self.input[self.pos as usize..(self.pos as usize + len)])
                 .unwrap(),
             )
         }

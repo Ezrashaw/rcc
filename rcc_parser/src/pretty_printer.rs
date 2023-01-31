@@ -41,7 +41,7 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
         writeln!(self.buf, "{{")?;
 
         for item in &block.block_items {
-            self.print_block_item(&item, 1)?;
+            self.print_block_item(item, 1)?;
         }
 
         writeln!(self.buf, "}}")
@@ -94,10 +94,10 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
             Statement::Compound(block) => self.print_block(block)?,
         };
 
-        if !matches!(stmt, Statement::Conditional(..)) {
-            writeln!(self.buf, ";")
-        } else {
+        if matches!(stmt, Statement::Conditional(..)) {
             writeln!(self.buf)
+        } else {
+            writeln!(self.buf, ";")
         }
     }
 

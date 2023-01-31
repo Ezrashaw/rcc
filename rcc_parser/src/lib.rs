@@ -3,8 +3,6 @@
 #![feature(if_let_guard)]
 #![feature(option_result_contains)]
 
-use std::mem;
-
 use self::ast::{Expression, Program, Statement};
 
 pub mod ast;
@@ -41,11 +39,11 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         let tok = self.input.next();
 
         if !tok.as_ref().is_some_and(|tok| tok.kind == expected_kind) {
-            self.emit_err_from_token(&format!("`{expected_kind:?}`"), tok);
+            Self::emit_err_from_token(&format!("`{expected_kind:?}`"), tok);
         }
     }
 
-    fn emit_err_from_token(&self, expected: &str, token: Option<Token>) -> ! {
+    fn emit_err_from_token(expected: &str, token: Option<Token>) -> ! {
         if let Some(token) = token {
             SpannedError::with_span(
                 format!("expected {expected}, found `{:?}`", token.kind),
@@ -71,7 +69,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
         let tok = self.input.next();
         let Some(TokenKind::Ident(name)) = tok.as_ref().map(|t| &t.kind) else {
-            self.emit_err_from_token("<identifier>", tok)
+            Self::emit_err_from_token("<identifier>", tok)
         };
 
         self.expect_token(TokenKind::OpenParen);
@@ -127,7 +125,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
                 let ident_tok = self.input.next();
                 let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident_tok else {
-                    self.emit_err_from_token("<identifier>", ident_tok);
+                    Self::emit_err_from_token("<identifier>", ident_tok);
                 };
 
                 let current_scope = self.scopes.last_mut().unwrap();
@@ -194,9 +192,9 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                         if_true,
                         Some(Box::new(self.parse_statement())),
                     );
-                } else {
-                    return Statement::Conditional(expr, if_true, None);
                 }
+
+                return Statement::Conditional(expr, if_true, None);
             }
 
             Some(TokenKind::OpenBrace) => return Statement::Compound(self.parse_block()),
@@ -212,7 +210,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         if let Some(TokenKind::Equals) = self.input.peek_nth(1).map(|t| t.kind.clone()) {
             let ident_tok = self.input.next();
             let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident_tok else {
-                self.emit_err_from_token("<variable>", ident_tok);
+                Self::emit_err_from_token("<variable>", ident_tok);
             };
 
             let identifier = self.get_variable(ident, ident_tok.unwrap().span);
@@ -277,7 +275,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 Expression::Variable { identifier: self.get_variable(var, tok.unwrap().span) }
             }
 
-            _ => self.emit_err_from_token("<expresion>", tok),
+            _ => Self::emit_err_from_token("<expresion>", tok),
         }
     }
 
@@ -302,9 +300,9 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         {
             if ident == *search {
                 return position;
-            } else {
-                position -= 1;
             }
+
+            position -= 1;
         }
 
         SpannedError::with_span("undefined variable", span).emit();

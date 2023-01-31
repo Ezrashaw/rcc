@@ -23,7 +23,7 @@ impl Bytecode<'_> {
                     ReadLocation::Constant(0)
                 };
 
-                self.append_instruction(Instruction::AssignVariable(*id, reg))
+                self.append_instruction(Instruction::AssignVariable(*id, reg));
             }
             BlockItem::Statement(stmt) => self.append_from_statement(stmt),
         }
@@ -35,11 +35,11 @@ impl Bytecode<'_> {
                 let reg = self.append_from_expression(expr);
                 self.append_instruction(Instruction::Return(reg.clone()));
 
-                self.dealloc_reg(reg)
+                self.dealloc_reg(reg);
             }
             Statement::Expression(expr) => {
                 let reg = self.append_from_expression(expr);
-                self.dealloc_reg(reg)
+                self.dealloc_reg(reg);
             }
             Statement::Conditional(expr, true_branch, false_branch) => {
                 self.append_from_conditional(expr, true_branch, false_branch.as_deref());

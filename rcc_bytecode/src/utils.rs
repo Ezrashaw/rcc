@@ -6,13 +6,9 @@ use crate::{Bytecode, Instruction, ReadLocation, WriteLocation};
 impl Bytecode<'_> {
     pub(crate) fn alloc_reg(&mut self) -> WriteLocation {
         let loc = (0..255)
-            .map(|i| WriteLocation(i))
-            .filter(|loc| !self.allocated_registers.contains(loc))
-            .next()
-            .expect(&format!(
-                "exhausted registers during bytecode generations: {:?}",
-                self
-            ));
+            .map(WriteLocation)
+            .find(|loc| !self.allocated_registers.contains(loc))
+            .unwrap_or_else(|| panic!("exhausted registers during bytecode generations: {self:?}"));
 
         self.allocated_registers.push(loc.clone());
 
@@ -45,6 +41,6 @@ impl Bytecode<'_> {
     }
 
     pub(crate) fn append_instruction(&mut self, instr: Instruction) {
-        self.instr.push(instr)
+        self.instr.push(instr);
     }
 }

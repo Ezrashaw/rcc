@@ -125,7 +125,7 @@ multi_char_tokens! {
         continue: |ch: char| ch.is_ascii_digit(),
         final: |slice: &str, span: Span| {
             let Ok(lit) = slice.parse() else {
-                SpannedError::with_span(format!("Failed to lex integer literal"), span).emit()
+                SpannedError::with_span("Failed to lex integer literal".to_string(), span).emit()
             };
             TokenKind::Literal(lit)
         }

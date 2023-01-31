@@ -88,8 +88,9 @@ fn optimize_block_item_with_pass(item: &mut BlockItem, pass: &mut impl Optimizat
 fn optimize_statement_with_pass(stmt: &mut Statement, pass: &mut impl OptimizationPass) {
     pass.opt_statement(stmt);
     match stmt {
-        Statement::Return(expr) => optimize_expression_with_pass(expr, pass),
-        Statement::Expression(expr) => optimize_expression_with_pass(expr, pass),
+        Statement::Return(expr) | Statement::Expression(expr) => {
+            optimize_expression_with_pass(expr, pass);
+        }
         Statement::Conditional(controlling, true_branch, false_branch) => {
             optimize_expression_with_pass(controlling, pass);
             optimize_statement_with_pass(true_branch, pass);
@@ -110,11 +111,9 @@ fn optimize_expression_with_pass(expression: &mut Expression, pass: &mut impl Op
             optimize_expression_with_pass(rhs, pass);
         }
         Expression::UnaryOp { expr, .. } => optimize_expression_with_pass(expr, pass),
-        Expression::Literal { .. } => (),
         Expression::Assignment { expression, .. } => {
-            optimize_expression_with_pass(expression, pass)
+            optimize_expression_with_pass(expression, pass);
         }
-        Expression::Variable { .. } => (),
         Expression::TernaryConditional {
             controlling,
             if_true,
@@ -124,5 +123,7 @@ fn optimize_expression_with_pass(expression: &mut Expression, pass: &mut impl Op
             optimize_expression_with_pass(if_true, pass);
             optimize_expression_with_pass(if_false, pass);
         }
+
+        _ => (),
     }
 }

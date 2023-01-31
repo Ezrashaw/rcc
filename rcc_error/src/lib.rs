@@ -15,6 +15,7 @@ pub struct SpannedError<'a> {
 }
 
 impl<'a> SpannedError<'a> {
+    #[allow(clippy::needless_pass_by_value)]
     pub fn with_span(msg: impl ToString, span: Span<'a>) -> Self {
         Self {
             msg: msg.to_string(),
@@ -22,6 +23,7 @@ impl<'a> SpannedError<'a> {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     pub fn without_span(msg: impl ToString) -> Self {
         Self {
             msg: msg.to_string(),
@@ -61,7 +63,7 @@ impl Display for SpannedError<'_> {
                     .set_fg(Some(Color::Ansi256(8))),
             )
             .unwrap();
-            writeln!(buf, "╰──> {}:{}:{}", "<anon>", pos.0, pos.1).unwrap();
+            writeln!(buf, "╰──> <anon>:{}:{}", pos.0, pos.1).unwrap();
 
             buf.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Blue)))
                 .unwrap();
@@ -72,13 +74,9 @@ impl Display for SpannedError<'_> {
             writeln!(buf, "{}", span.input().lines().nth(pos.0 as usize).unwrap()).unwrap();
 
             let spaces = 4;
-            let spaces = std::iter::repeat(' ')
-                .take((spaces + pos.1).try_into().unwrap())
-                .collect::<String>();
+            let spaces = " ".repeat((spaces + pos.1).try_into().unwrap());
 
-            let arrows = std::iter::repeat('^')
-                .take(cmp::max(span.length().try_into().unwrap(), 1))
-                .collect::<String>();
+            let arrows = "^".repeat(cmp::max(span.length().try_into().unwrap(), 1));
 
             buf.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)))
                 .unwrap();
