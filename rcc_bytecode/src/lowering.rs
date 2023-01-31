@@ -38,8 +38,10 @@ impl Bytecode<'_> {
                 self.dealloc_reg(reg);
             }
             Statement::Expression(expr) => {
-                let reg = self.append_from_expression(expr);
-                self.dealloc_reg(reg);
+                if let Some(expr) = expr {
+                    let reg = self.append_from_expression(expr);
+                    self.dealloc_reg(reg);
+                }
             }
             Statement::Conditional(expr, true_branch, false_branch) => {
                 self.append_from_conditional(expr, true_branch, false_branch.as_deref());

@@ -23,7 +23,9 @@ pub fn optimize_ast(ast: &mut Program) {
     ast.function.block.block_items.retain(|stmt| {
         !matches!(
             stmt,
-            BlockItem::Statement(Statement::Expression(Expression::Literal { .. }))
+            BlockItem::Statement(Statement::Expression(
+                Some(Expression::Literal { .. }) | None
+            ))
         )
     });
 
@@ -36,7 +38,9 @@ pub fn optimize_ast(ast: &mut Program) {
     ast.function.block.block_items.retain(|stmt| {
         !matches!(
             stmt,
-            BlockItem::Statement(Statement::Expression(Expression::Literal { .. }))
+            BlockItem::Statement(Statement::Expression(
+                Some(Expression::Literal { .. }) | None
+            ))
         )
     });
 
@@ -46,7 +50,9 @@ pub fn optimize_ast(ast: &mut Program) {
     ast.function.block.block_items.retain(|stmt| {
         !matches!(
             stmt,
-            BlockItem::Statement(Statement::Expression(Expression::Literal { .. }))
+            BlockItem::Statement(Statement::Expression(
+                Some(Expression::Literal { .. }) | None
+            ))
         )
     });
 
@@ -56,7 +62,9 @@ pub fn optimize_ast(ast: &mut Program) {
     ast.function.block.block_items.retain(|stmt| {
         !matches!(
             stmt,
-            BlockItem::Statement(Statement::Expression(Expression::Literal { .. }))
+            BlockItem::Statement(Statement::Expression(
+                Some(Expression::Literal { .. }) | None
+            ))
         )
     });
 }
@@ -88,8 +96,11 @@ fn optimize_block_item_with_pass(item: &mut BlockItem, pass: &mut impl Optimizat
 fn optimize_statement_with_pass(stmt: &mut Statement, pass: &mut impl OptimizationPass) {
     pass.opt_statement(stmt);
     match stmt {
-        Statement::Return(expr) | Statement::Expression(expr) => {
-            optimize_expression_with_pass(expr, pass);
+        Statement::Return(expr) => optimize_expression_with_pass(expr, pass),
+        Statement::Expression(expr) => {
+            if let Some(expr) = expr {
+                optimize_expression_with_pass(expr, pass);
+            }
         }
         Statement::Conditional(controlling, true_branch, false_branch) => {
             optimize_expression_with_pass(controlling, pass);

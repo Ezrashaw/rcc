@@ -35,8 +35,9 @@ pub enum Statement<'a> {
 
     /// Standalone expression.
     ///
-    /// Created from code like `2 + 2;`, used for variable assignments.
-    Expression(Expression),
+    /// Created from code like `2 + 2;`, primarily for variable assignments.
+    /// "Null" expressions are also allowed, as in ";;;;;;;;".
+    Expression(Option<Expression>),
 
     /// A common `if` statement.
     ///

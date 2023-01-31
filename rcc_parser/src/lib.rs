@@ -199,11 +199,21 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
             Some(TokenKind::OpenBrace) => return Statement::Compound(self.parse_block()),
 
-            _ => Statement::Expression(self.parse_expression()),
+            _ => Statement::Expression(self.parse_optional_expression()),
         };
 
         self.expect_token(TokenKind::Semicolon);
         stmt
+    }
+
+    fn parse_optional_expression(&mut self) -> Option<Expression> {
+        if self.input.peek().map_or(true, |tok| {
+            matches!(tok.kind, TokenKind::Semicolon | TokenKind::CloseParen)
+        }) {
+            None
+        } else {
+            Some(self.parse_expression())
+        }
     }
 
     fn parse_expression(&mut self) -> Expression {

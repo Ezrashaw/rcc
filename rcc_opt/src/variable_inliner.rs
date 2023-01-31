@@ -22,12 +22,13 @@ impl OptimizationPass for VariableInliner {
         if let BlockItem::Declaration(id, val) = item {
             if let Some(Expression::Literal { val }) = val {
                 self.inlined.insert(*id, *val);
-                *item =
-                    BlockItem::Statement(Statement::Expression(Expression::Literal { val: *val }));
+                *item = BlockItem::Statement(Statement::Expression(Some(Expression::Literal {
+                    val: *val,
+                })));
             } else if val.is_none() {
                 // variables are init'ed to 0 implicitly
                 self.inlined.insert(*id, 0);
-                *item = BlockItem::Statement(Statement::Expression(Expression::Literal { val: 0 }));
+                *item = BlockItem::Statement(Statement::Expression(None));
             }
         }
     }

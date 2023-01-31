@@ -76,7 +76,11 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
                 self.print_expr(expr)?;
             }
 
-            Statement::Expression(expr) => self.print_expr(expr)?,
+            Statement::Expression(expr) => {
+                if let Some(expr) = expr {
+                    self.print_expr(expr)?;
+                }
+            }
             Statement::Conditional(expr, if_true, if_false) => {
                 write!(self.buf, "if (")?;
                 self.print_expr(expr)?;
