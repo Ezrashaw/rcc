@@ -44,12 +44,7 @@ pub enum Instruction {
     /// Also provides position for [`Instruction::ShortCircuit`] to jump to.
     BinaryBooleanOp(WriteLocation, u32),
 
-    /// Declares a new local variable on the stack.
-    ///
-    /// For x86, simply emits `pushl {loc}`.
-    DeclareVariable(u32, ReadLocation),
-
-    /// Modifies a local variable (declared with [`Instruction::DeclareVariable`]).
+    /// Modifies/declares a local variable.
     ///
     /// Assigns the variable with the given identifier, for x86 these are
     /// multiplied and converted to `EBP` offsets.

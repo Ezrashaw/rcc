@@ -74,7 +74,6 @@ impl X86Backend {
             Instruction::Return(loc) => writeln!(
                 self.buf,
                 "movl {1}, %eax\n{0}\
-                movq %rbp, %rsp # restore RSP; now it points to old RBP\n{0}\
                 pop %rbp        # restore old RBP; now RSP is where it was before prologue\n{0}\
                 ret",
                 self.indent(),
@@ -102,13 +101,6 @@ impl X86Backend {
                 Register::from_u8(wloc.reg()).get_low_8()
             )?,
 
-            Instruction::DeclareVariable(var, rloc) => writeln!(
-                self.buf,
-                "movl {}, -{}(%rbp)\n{}subq $4, %rsp",
-                Self::rloc_to_asm(rloc),
-                (var + 1) * 4,
-                self.indent()
-            )?,
             Instruction::AssignVariable(var, rloc) => writeln!(
                 self.buf,
                 "movl {}, -{}(%rbp)",

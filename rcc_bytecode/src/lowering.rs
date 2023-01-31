@@ -23,7 +23,7 @@ impl Bytecode<'_> {
                     ReadLocation::Constant(0)
                 };
 
-                self.append_instruction(Instruction::DeclareVariable(*id, reg))
+                self.append_instruction(Instruction::AssignVariable(*id, reg))
             }
             BlockItem::Statement(stmt) => self.append_from_statement(stmt),
         }
