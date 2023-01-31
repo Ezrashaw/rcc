@@ -1,12 +1,12 @@
-use rcc_parser::ast::{BlockItem, Expression, Function, Statement};
+use rcc_parser::ast::{Block, BlockItem, Expression, Statement};
 use rcc_structures::BinOp;
 
 use crate::{Bytecode, Instruction, ReadLocation};
 
 /// Defines `append_from_*` methods, used internally to lower from AST.
 impl Bytecode<'_> {
-    pub(crate) fn append_from_function(&mut self, function: &Function) {
-        for item in &function.block.block_items {
+    pub(crate) fn append_from_block(&mut self, block: &Block) {
+        for item in &block.block_items {
             self.append_from_block_item(item);
         }
     }
@@ -44,7 +44,7 @@ impl Bytecode<'_> {
             Statement::Conditional(expr, true_branch, false_branch) => {
                 self.append_from_conditional(expr, true_branch, false_branch.as_deref());
             }
-            Statement::Compound(_) => todo!(),
+            Statement::Compound(block) => self.append_from_block(block),
         }
     }
 

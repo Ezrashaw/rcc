@@ -36,7 +36,7 @@ impl<'a> Bytecode<'a> {
             allocated_registers: Vec::new(),
         };
 
-        bytecode.append_from_function(function);
+        bytecode.append_from_block(&function.block);
 
         bytecode
     }
