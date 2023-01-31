@@ -58,9 +58,12 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
     }
 
     pub fn parse(mut self) -> Program<'a> {
-        Program {
-            function: self.parse_function(),
+        let function = self.parse_function();
+        if self.input.next().is_some() {
+            SpannedError::without_span("Unexpected tokens when EOF expected").emit();
         }
+
+        Program { function }
     }
 
     fn parse_function(&mut self) -> Function<'a> {
