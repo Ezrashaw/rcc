@@ -75,6 +75,7 @@ dependencies = [
  "peekmore",
  "rcc_error",
  "rcc_lexer",
+ "rcc_span",
  "rcc_structures",
 ]
 

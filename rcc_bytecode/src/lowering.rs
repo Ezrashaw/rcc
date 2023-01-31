@@ -44,6 +44,7 @@ impl Bytecode<'_> {
             Statement::Conditional(expr, true_branch, false_branch) => {
                 self.append_from_conditional(expr, true_branch, false_branch.as_deref());
             }
+            Statement::Compound(_) => todo!(),
         }
     }
 

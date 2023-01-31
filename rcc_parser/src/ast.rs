@@ -13,24 +13,24 @@ pub struct Function<'a> {
 #[derive(Debug)]
 // FIXME: scope should be seperated for global variables
 pub struct Block<'a> {
-    pub block_items: Vec<BlockItem>,
+    pub block_items: Vec<BlockItem<'a>>,
     pub variables: Vec<&'a str>,
     pub parent: Option<&'a Block<'a>>,
 }
 
 #[derive(Debug)]
-pub enum BlockItem {
+pub enum BlockItem<'a> {
     /// Variable definition.
     ///
     /// Indexes into [`Function`]s vector of local identifiers.
     /// Contains an optional initializer.
     Declaration(u32, Option<Expression>),
 
-    Statement(Statement),
+    Statement(Statement<'a>),
 }
 
 #[derive(Debug)]
-pub enum Statement {
+pub enum Statement<'a> {
     Return(Expression),
 
     /// Standalone expression.
@@ -42,7 +42,10 @@ pub enum Statement {
     ///
     /// Contains a controlling expression, a `true` branch and an optional
     /// `false` branch.
-    Conditional(Expression, Box<Statement>, Option<Box<Statement>>),
+    Conditional(Expression, Box<Statement<'a>>, Option<Box<Statement<'a>>>),
+
+    /// A compound statement, otherwise known as a "block".
+    Compound(Block<'a>),
 }
 
 #[derive(Debug)]

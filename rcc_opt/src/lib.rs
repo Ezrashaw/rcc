@@ -68,6 +68,10 @@ fn optimize_ast_with_pass(ast: &mut Program, pass: &mut impl OptimizationPass) {
     let block = &mut function.block;
     pass.opt_block(block);
 
+    optimize_block_with_pass(block, pass);
+}
+
+fn optimize_block_with_pass(block: &mut Block, pass: &mut impl OptimizationPass) {
     for block_item in &mut block.block_items {
         optimize_block_item_with_pass(block_item, pass);
     }
@@ -93,6 +97,7 @@ fn optimize_statement_with_pass(stmt: &mut Statement, pass: &mut impl Optimizati
                 optimize_statement_with_pass(false_branch, pass);
             }
         }
+        Statement::Compound(block) => optimize_block_with_pass(block, pass),
     }
 }
 

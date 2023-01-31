@@ -21,10 +21,10 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
     }
 
     fn print_variable(&mut self, var: u32) -> io::Result<()> {
-        // FIXME: we won't always just have one function!
-        let name = self.ast.function.block.variables[var as usize];
+        // FIXME: how to deal with blocks?
+        // let name = self.ast.function.block.variables[var as usize];
 
-        write!(self.buf, "{name}")
+        write!(self.buf, "%{var}")
     }
 
     pub fn print(mut self) -> io::Result<()> {
@@ -91,6 +91,7 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
                     self.print_stmt(if_false, indent_level + 1)?;
                 }
             }
+            Statement::Compound(block) => self.print_block(block)?,
         };
 
         if !matches!(stmt, Statement::Conditional(..)) {
