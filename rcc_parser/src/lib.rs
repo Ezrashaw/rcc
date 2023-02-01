@@ -460,7 +460,7 @@ impl_binop! {
         TokenKind::ExclaimEquals => BinOp::NotEquals,
         TokenKind::LessThan => BinOp::LessThan,
         TokenKind::LessThanEquals => BinOp::LessThanOrEquals,
-        TokenKind::GreaterThan => BinOp::GreaterThanOrEquals,
+        TokenKind::GreaterThan => BinOp::GreaterThan,
         TokenKind::GreaterThanEquals => BinOp::GreaterThanOrEquals,
 
         TokenKind::Plus => BinOp::Add,
