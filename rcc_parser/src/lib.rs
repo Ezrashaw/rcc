@@ -3,6 +3,8 @@
 #![feature(if_let_guard)]
 #![feature(option_result_contains)]
 
+use std::backtrace::Backtrace;
+
 use self::ast::{Expression, Program, Statement};
 
 pub mod ast;
@@ -39,6 +41,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         let tok = self.input.next();
 
         if !tok.as_ref().is_some_and(|tok| tok.kind == expected_kind) {
+            println!("{}", Backtrace::force_capture());
             Self::emit_err_from_token(&format!("`{expected_kind:?}`"), tok);
         }
     }
@@ -280,8 +283,14 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 );
             }
 
-            Some(TokenKind::Keyword(Keyword::Break)) => Statement::Break,
-            Some(TokenKind::Keyword(Keyword::Continue)) => Statement::Continue,
+            Some(TokenKind::Keyword(Keyword::Break)) => {
+                self.input.next();
+                Statement::Break
+            }
+            Some(TokenKind::Keyword(Keyword::Continue)) => {
+                self.input.next();
+                Statement::Continue
+            }
 
             _ => Statement::Expression(self.parse_optional_expression()),
         };

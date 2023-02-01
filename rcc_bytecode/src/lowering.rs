@@ -66,6 +66,9 @@ impl Bytecode<'_> {
                 let post_label = self.label_counter + 1;
                 self.label_counter += 2;
 
+                self.loop_start.push(evaluate_label);
+                self.loop_end.push(post_label);
+
                 self.append_instruction(Instruction::JumpDummy(evaluate_label));
 
                 let controlling_loc = self.append_from_expression(controlling);
@@ -80,11 +83,19 @@ impl Bytecode<'_> {
                 self.dealloc_reg(controlling_loc.downgrade());
 
                 self.append_from_statement(body);
-                self.append_instruction(Instruction::PostConditional(evaluate_label, post_label))
+                self.append_instruction(Instruction::PostConditional(evaluate_label, post_label));
+
+                self.loop_start.pop();
+                self.loop_end.pop();
             }
             Statement::Do(controlling, body) => {
                 let pre_body = self.label_counter;
-                self.label_counter += 1;
+                // used solely for `break`.
+                let post_loop = self.label_counter + 1;
+                self.label_counter += 2;
+
+                self.loop_start.push(pre_body);
+                self.loop_end.push(post_loop);
 
                 self.append_instruction(Instruction::JumpDummy(pre_body));
 
@@ -100,9 +111,10 @@ impl Bytecode<'_> {
                 ));
 
                 self.dealloc_reg(controlling_loc.downgrade());
+
+                self.loop_start.pop();
+                self.loop_end.pop();
             }
-            Statement::Break => todo!(),
-            Statement::Continue => todo!(),
             Statement::For(init, condition, post, body) => {
                 if let Some(init) = init {
                     let reg = self.append_from_expression(init);
@@ -115,6 +127,23 @@ impl Bytecode<'_> {
                 self.append_from_declaration(var_id, var_init);
 
                 self.append_from_for_loop(condition.as_ref(), post.as_ref(), body);
+            }
+
+            Statement::Break => {
+                if let Some(post_loop) = self.loop_end.last() {
+                    self.append_instruction(Instruction::UnconditionalJump(*post_loop));
+                } else {
+                    // FIXME: use the already established error-reporting methods.
+                    panic!("`break` occured outside of loop!");
+                }
+            }
+            Statement::Continue => {
+                if let Some(pre_loop) = self.loop_start.last() {
+                    self.append_instruction(Instruction::UnconditionalJump(*pre_loop));
+                } else {
+                    // FIXME: use the already established error-reporting methods.
+                    panic!("`continue` occured outside of loop!");
+                }
             }
         }
     }
@@ -130,8 +159,12 @@ impl Bytecode<'_> {
         let condition = condition.unwrap_or(&Expression::Literal { val: 1 });
 
         let pre_condition = self.label_counter;
-        let post_loop = self.label_counter + 1;
-        self.label_counter += 2;
+        let loop_continue = self.label_counter + 1;
+        let post_loop = self.label_counter + 2;
+        self.label_counter += 3;
+
+        self.loop_start.push(loop_continue);
+        self.loop_end.push(post_loop);
 
         self.append_instruction(Instruction::JumpDummy(pre_condition));
         let reg = self.append_from_expression(condition);
@@ -142,12 +175,16 @@ impl Bytecode<'_> {
 
         self.append_from_statement(body);
 
+        self.append_instruction(Instruction::JumpDummy(loop_continue));
         if let Some(post) = post {
             let reg = self.append_from_expression(post);
             self.dealloc_reg(reg);
         }
 
         self.append_instruction(Instruction::PostConditional(pre_condition, post_loop));
+
+        self.loop_start.pop();
+        self.loop_end.pop();
     }
 
     /// Generates bytecode for the provided expression and appends it to the

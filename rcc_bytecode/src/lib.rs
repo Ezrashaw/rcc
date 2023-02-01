@@ -25,6 +25,8 @@ pub struct Bytecode<'a> {
     label_counter: u32,
     // FIXME: come up with some algorithim or something to remove this vec
     allocated_registers: Vec<WriteLocation>,
+    loop_start: Vec<u32>,
+    loop_end: Vec<u32>,
 }
 
 impl<'a> Bytecode<'a> {
@@ -34,6 +36,8 @@ impl<'a> Bytecode<'a> {
             instr: Vec::new(),
             label_counter: 0,
             allocated_registers: Vec::new(),
+            loop_start: Vec::new(),
+            loop_end: Vec::new(),
         };
 
         bytecode.append_from_block(&function.block);

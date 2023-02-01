@@ -72,6 +72,12 @@ pub enum Instruction {
     // FIXME: remove this, we could fix this with instruction addressing
     //        instead of the ad-hoc allocation currently.
     JumpDummy(u32),
+
+    /// Performs an unconditional jump to the specififed location.
+    ///
+    /// One-to-one mapping to the x86 JMP instruction.
+    // FIXME: remove, use some other thing
+    UnconditionalJump(u32),
 }
 
 /// Someplace where a value can be read.

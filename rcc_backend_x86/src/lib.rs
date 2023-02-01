@@ -130,6 +130,7 @@ impl X86Backend {
             }
             // FIXME: gah, this messes up the formatting
             Instruction::JumpDummy(post_else) => writeln!(self.buf, "_{post_else}:")?,
+            Instruction::UnconditionalJump(loc) => writeln!(self.buf, "jmp _{loc}")?,
         }
 
         writeln!(self.buf)
