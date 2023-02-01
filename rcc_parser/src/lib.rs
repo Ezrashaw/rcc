@@ -210,6 +210,22 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 return Statement::While(controlling, Box::new(body));
             }
 
+            Some(TokenKind::Keyword(Keyword::Do)) => {
+                self.input.next();
+
+                let body = self.parse_statement();
+
+                self.expect_token(TokenKind::Keyword(Keyword::While));
+
+                self.expect_token(TokenKind::OpenParen);
+                let controlling = self.parse_expression();
+                self.expect_token(TokenKind::CloseParen);
+
+                // note that this is different from a normal `while` loop due
+                // to the trailing semicolon
+                Statement::Do(controlling, Box::new(body))
+            }
+
             Some(TokenKind::Keyword(Keyword::Break)) => Statement::Break,
             Some(TokenKind::Keyword(Keyword::Continue)) => Statement::Continue,
 

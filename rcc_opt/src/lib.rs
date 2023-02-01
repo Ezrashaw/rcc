@@ -110,10 +110,12 @@ fn optimize_statement_with_pass(stmt: &mut Statement, pass: &mut impl Optimizati
             }
         }
         Statement::Compound(block) => optimize_block_with_pass(block, pass),
-        Statement::While(controlling, body) => {
+
+        Statement::While(controlling, body) | Statement::Do(controlling, body) => {
             optimize_expression_with_pass(controlling, pass);
             optimize_statement_with_pass(body, pass);
         }
+
         Statement::Break | Statement::Continue => (),
     }
 }

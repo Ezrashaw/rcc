@@ -80,6 +80,25 @@ impl Bytecode<'_> {
                 self.append_from_statement(body);
                 self.append_instruction(Instruction::PostConditional(evaluate_label, post_label))
             }
+            Statement::Do(controlling, body) => {
+                let pre_body = self.label_counter;
+                self.label_counter += 1;
+
+                self.append_instruction(Instruction::JumpDummy(pre_body));
+
+                self.append_from_statement(body);
+
+                let controlling_loc = self.append_from_expression(controlling);
+                let controlling_loc = self.upgrade_readable(controlling_loc);
+
+                self.append_instruction(Instruction::CompareJump(
+                    controlling_loc.clone(),
+                    true,
+                    pre_body,
+                ));
+
+                self.dealloc_reg(controlling_loc.downgrade());
+            }
             Statement::Break => todo!(),
             Statement::Continue => todo!(),
         }

@@ -88,13 +88,13 @@ impl X86Backend {
             Instruction::BinaryOp(op, lhs, rhs) => self.write_binop(*op, lhs, rhs)?,
             Instruction::UnaryOp(op, loc) => self.write_unary_op(*op, loc)?,
 
-            Instruction::CompareJump(rloc, should_short, jump_loc) => writeln!(
+            Instruction::CompareJump(rloc, should_jump, jump_loc) => writeln!(
                 self.buf,
                 "cmpl $0, {} # check if expr is true\n{}\
                 {} _{jump_loc}  # if so, jump",
                 Self::wloc_to_asm(rloc),
                 self.indent(),
-                if *should_short { "jne" } else { "je" }
+                if *should_jump { "jne" } else { "je" }
             )?,
             Instruction::BinaryBooleanOp(wloc, jump_loc) => writeln!(
                 self.buf,

@@ -54,6 +54,15 @@ pub enum Statement<'a> {
     /// to execute.
     While(Expression, Box<Statement<'a>>),
 
+    /// A "do" loop.
+    ///
+    /// Extremely similar to a "while" loop, except that the expression is
+    /// evaluated after each iteration.
+    ///
+    /// Contains the expression to evaluate per-iteration and the body
+    /// to execute.
+    Do(Expression, Box<Statement<'a>>),
+
     /// Statement that "break"s out of a loop.
     ///
     /// Note that it is *valid* ast for a [`Statement::Break`] to occur
