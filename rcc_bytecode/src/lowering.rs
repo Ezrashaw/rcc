@@ -24,21 +24,23 @@ impl Bytecode<'_> {
 
     fn append_from_block_item(&mut self, item: &BlockItem) {
         match item {
-            BlockItem::Declaration(id, val) => {
-                let reg = if let Some(init) = val {
-                    self.append_from_expression(init)
-                } else {
-                    // If a variable is declared but not initialized, then we can just
-                    // initialize to 0. The standard does not specify a value for this
-                    // situation. Ahh, the wonders of C.
-                    ReadLocation::Constant(0)
-                };
-
-                self.append_instruction(Instruction::AssignVariable(*id, reg.clone()));
-                self.dealloc_reg(reg);
-            }
+            BlockItem::Declaration(id, val) => self.append_from_declaration(id, val),
             BlockItem::Statement(stmt) => self.append_from_statement(stmt),
         }
+    }
+
+    fn append_from_declaration(&mut self, id: &u32, init: &Option<Expression>) {
+        let reg = if let Some(init) = init {
+            self.append_from_expression(init)
+        } else {
+            // If a variable is declared but not initialized, then we can just
+            // initialize to 0. The standard does not specify a value for this
+            // situation. Ahh, the wonders of C.
+            ReadLocation::Constant(0)
+        };
+
+        self.append_instruction(Instruction::AssignVariable(*id, reg.clone()));
+        self.dealloc_reg(reg);
     }
 
     fn append_from_statement(&mut self, stmt: &Statement) {
@@ -101,9 +103,51 @@ impl Bytecode<'_> {
             }
             Statement::Break => todo!(),
             Statement::Continue => todo!(),
-            Statement::For(_, _, _, _) => todo!(),
-            Statement::ForDecl(_, _, _, _, _) => todo!(),
+            Statement::For(init, condition, post, body) => {
+                if let Some(init) = init {
+                    let reg = self.append_from_expression(init);
+                    self.dealloc_reg(reg);
+                }
+
+                self.append_from_for_loop(condition.as_ref(), post.as_ref(), body);
+            }
+            Statement::ForDecl(var_id, var_init, condition, post, body) => {
+                self.append_from_declaration(var_id, var_init);
+
+                self.append_from_for_loop(condition.as_ref(), post.as_ref(), body);
+            }
         }
+    }
+
+    fn append_from_for_loop(
+        &mut self,
+        condition: Option<&Expression>,
+        post: Option<&Expression>,
+        body: &Statement,
+    ) {
+        // C requires that this expression must be a non-zero constant value if
+        // the AST doesn't contain a expression.
+        let condition = condition.unwrap_or(&Expression::Literal { val: 1 });
+
+        let pre_condition = self.label_counter;
+        let post_loop = self.label_counter + 1;
+        self.label_counter += 2;
+
+        self.append_instruction(Instruction::JumpDummy(pre_condition));
+        let reg = self.append_from_expression(condition);
+        let reg = self.upgrade_readable(reg);
+
+        self.append_instruction(Instruction::CompareJump(reg.clone(), false, post_loop));
+        self.dealloc_reg(reg.downgrade());
+
+        self.append_from_statement(body);
+
+        if let Some(post) = post {
+            let reg = self.append_from_expression(post);
+            self.dealloc_reg(reg);
+        }
+
+        self.append_instruction(Instruction::PostConditional(pre_condition, post_loop));
     }
 
     /// Generates bytecode for the provided expression and appends it to the
