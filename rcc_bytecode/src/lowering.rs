@@ -47,7 +47,25 @@ impl Bytecode<'_> {
                 self.append_from_conditional(expr, true_branch, false_branch.as_deref());
             }
             Statement::Compound(block) => self.append_from_block(block),
-            Statement::While(_, _) => todo!(),
+            Statement::While(controlling, body) => {
+                let evaluate_label = self.label_counter;
+                let post_label = self.label_counter + 1;
+                self.label_counter += 2;
+
+                self.append_instruction(Instruction::JumpDummy(evaluate_label));
+
+                let controlling_loc = self.append_from_expression(controlling);
+                let controlling_loc = self.upgrade_readable(controlling_loc);
+
+                self.append_instruction(Instruction::CompareJump(
+                    controlling_loc,
+                    false,
+                    post_label,
+                ));
+
+                self.append_from_statement(body);
+                self.append_instruction(Instruction::PostConditional(evaluate_label, post_label))
+            }
             Statement::Break => todo!(),
             Statement::Continue => todo!(),
         }
