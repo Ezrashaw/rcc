@@ -96,6 +96,10 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
                 }
             }
             Statement::Compound(block) => self.print_block(block)?,
+            Statement::While(_, _) => (),
+
+            Statement::Break => write!(self.buf, "break")?,
+            Statement::Continue => write!(self.buf, "continue")?,
         };
 
         if matches!(stmt, Statement::Conditional(..)) {

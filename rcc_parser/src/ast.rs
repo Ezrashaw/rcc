@@ -47,6 +47,24 @@ pub enum Statement<'a> {
 
     /// A compound statement, otherwise known as a "block".
     Compound(Block<'a>),
+
+    /// A "while" loop.
+    ///
+    /// Contains the expression to evaluate per-iteration and the body
+    /// to execute.
+    While(Expression, Box<Statement<'a>>),
+
+    /// Statement that "break"s out of a loop.
+    ///
+    /// Note that it is *valid* ast for a [`Statement::Break`] to occur
+    /// outside of a loop, this is validated later.
+    Break,
+
+    /// Statement that "continue"s to the next iteration of a loop.
+    ///
+    /// Note that it is *valid* ast for a [`Statement::Continue`] to occur
+    /// outside of a loop, this is validated later.
+    Continue,
 }
 
 #[derive(Debug)]

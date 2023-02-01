@@ -199,6 +199,20 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
             Some(TokenKind::OpenBrace) => return Statement::Compound(self.parse_block()),
 
+            Some(TokenKind::Keyword(Keyword::While)) => {
+                self.input.next();
+
+                self.expect_token(TokenKind::OpenParen);
+                let controlling = self.parse_expression();
+                self.expect_token(TokenKind::CloseParen);
+
+                let body = self.parse_statement();
+                return Statement::While(controlling, Box::new(body));
+            }
+
+            Some(TokenKind::Keyword(Keyword::Break)) => Statement::Break,
+            Some(TokenKind::Keyword(Keyword::Continue)) => Statement::Continue,
+
             _ => Statement::Expression(self.parse_optional_expression()),
         };
 
