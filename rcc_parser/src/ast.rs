@@ -63,6 +63,39 @@ pub enum Statement<'a> {
     /// to execute.
     Do(Expression, Box<Statement<'a>>),
 
+    /// A `for` loop that does not define a loop variable.
+    ///
+    /// In order, contains a:
+    /// - Initial expression
+    /// - Condition
+    /// - Post-expression
+    /// - Body
+    For(
+        Option<Expression>,
+        Option<Expression>,
+        Option<Expression>,
+        Box<Statement<'a>>,
+    ),
+
+    /// A `for` loop that defines a loop variable.
+    ///
+    /// In order, contains a:
+    /// - Variable identifier (for the declaration)
+    /// - Optional initializer (for the declaration)
+    /// - Condition
+    /// - Post-expression
+    /// - Body
+    // FIXME: I don't think tuple variants should span multiple lines. See `Statement::For` as well.
+    ForDecl(
+        u32,
+        Option<Expression>,
+        Option<Expression>,
+        Option<Expression>,
+        Box<Statement<'a>>,
+    ),
+
+    /// A `for` loop that defines a loop variable.
+
     /// Statement that "break"s out of a loop.
     ///
     /// Note that it is *valid* ast for a [`Statement::Break`] to occur

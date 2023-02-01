@@ -101,6 +101,8 @@ impl Bytecode<'_> {
             }
             Statement::Break => todo!(),
             Statement::Continue => todo!(),
+            Statement::For(_, _, _, _) => todo!(),
+            Statement::ForDecl(_, _, _, _, _) => todo!(),
         }
     }
 

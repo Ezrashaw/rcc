@@ -121,43 +121,48 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
         match tok.map(|t| &t.kind) {
             Some(TokenKind::Keyword(Keyword::Int)) => {
-                self.input.next();
+                let (ident, init) = self.parse_declaration();
 
-                let ident_tok = self.input.next();
-                let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident_tok else {
-                    Self::emit_err_from_token("<identifier>", ident_tok);
-                };
-
-                let current_scope = self.scopes.last_mut().unwrap();
-
-                if current_scope.contains(&ident) {
-                    SpannedError::with_span("variable already defined", ident_tok.unwrap().span)
-                        .emit()
-                }
-
-                current_scope.push(ident);
-                let ident = self.scopes.iter().flatten().count() - 1;
-
-                let init = if self
-                    .input
-                    .peek()
-                    .map(|t| t.kind.clone())
-                    .contains(&TokenKind::Equals)
-                {
-                    self.input.next();
-
-                    Some(self.parse_expression())
-                } else {
-                    None
-                };
-
-                self.expect_token(TokenKind::Semicolon);
-
-                BlockItem::Declaration(ident as u32, init)
+                BlockItem::Declaration(ident, init)
             }
 
             _ => BlockItem::Statement(self.parse_statement()),
         }
+    }
+
+    fn parse_declaration(&mut self) -> (u32, Option<Expression>) {
+        self.input.next();
+
+        let ident_tok = self.input.next();
+        let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident_tok else {
+            Self::emit_err_from_token("<identifier>", ident_tok);
+        };
+
+        let current_scope = self.scopes.last_mut().unwrap();
+
+        if current_scope.contains(&ident) {
+            SpannedError::with_span("variable already defined", ident_tok.unwrap().span).emit()
+        }
+
+        current_scope.push(ident);
+        let ident = self.scopes.iter().flatten().count() - 1;
+
+        let init = if self
+            .input
+            .peek()
+            .map(|t| t.kind.clone())
+            .contains(&TokenKind::Equals)
+        {
+            self.input.next();
+
+            Some(self.parse_expression())
+        } else {
+            None
+        };
+
+        self.expect_token(TokenKind::Semicolon);
+
+        (ident as u32, init)
     }
 
     fn parse_statement(&mut self) -> Statement<'a> {
@@ -224,6 +229,55 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 // note that this is different from a normal `while` loop due
                 // to the trailing semicolon
                 Statement::Do(controlling, Box::new(body))
+            }
+
+            Some(TokenKind::Keyword(Keyword::For)) => {
+                self.input.next();
+
+                self.expect_token(TokenKind::OpenParen);
+
+                if let Some(TokenKind::Keyword(Keyword::Int)) = self.input.peek().map(|tk| &tk.kind)
+                {
+                    self.scopes.push(Vec::new());
+
+                    let declaration = self.parse_declaration();
+
+                    let condition = self.parse_optional_expression();
+                    self.expect_token(TokenKind::Semicolon);
+
+                    let post_expression = self.parse_optional_expression();
+                    self.expect_token(TokenKind::CloseParen);
+
+                    let body = self.parse_statement();
+
+                    self.scopes.pop();
+
+                    return Statement::ForDecl(
+                        declaration.0,
+                        declaration.1,
+                        condition,
+                        post_expression,
+                        Box::new(body),
+                    );
+                }
+
+                let initial_expression = self.parse_optional_expression();
+                self.expect_token(TokenKind::Semicolon);
+
+                let condition = self.parse_optional_expression();
+                self.expect_token(TokenKind::Semicolon);
+
+                let post_expression = self.parse_optional_expression();
+                self.expect_token(TokenKind::CloseParen);
+
+                let body = self.parse_statement();
+
+                return Statement::For(
+                    initial_expression,
+                    condition,
+                    post_expression,
+                    Box::new(body),
+                );
             }
 
             Some(TokenKind::Keyword(Keyword::Break)) => Statement::Break,

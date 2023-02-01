@@ -117,6 +117,8 @@ fn optimize_statement_with_pass(stmt: &mut Statement, pass: &mut impl Optimizati
         }
 
         Statement::Break | Statement::Continue => (),
+        Statement::For(_, _, _, _) => todo!(),
+        Statement::ForDecl(_, _, _, _, _) => todo!(),
     }
 }
 
