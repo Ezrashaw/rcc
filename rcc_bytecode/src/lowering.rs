@@ -9,6 +9,17 @@ impl Bytecode<'_> {
         for item in &block.block_items {
             self.append_from_block_item(item);
         }
+
+        // ensure that we don't leak registers.
+        // FIXME: Rust's memory model could probably help with this.
+        if !self.allocated_registers.is_empty() {
+            println!("~~~~ BYTECODE DUMP ~~~~");
+            for instruction in &self.instr {
+                println!("{instruction:?}");
+            }
+            println!("~~~~~~~~~~~~~~~~~~~~~~~");
+            panic!("internal *bug*: we are leaking registers")
+        }
     }
 
     fn append_from_block_item(&mut self, item: &BlockItem) {
@@ -23,7 +34,8 @@ impl Bytecode<'_> {
                     ReadLocation::Constant(0)
                 };
 
-                self.append_instruction(Instruction::AssignVariable(*id, reg));
+                self.append_instruction(Instruction::AssignVariable(*id, reg.clone()));
+                self.dealloc_reg(reg);
             }
             BlockItem::Statement(stmt) => self.append_from_statement(stmt),
         }
@@ -58,10 +70,12 @@ impl Bytecode<'_> {
                 let controlling_loc = self.upgrade_readable(controlling_loc);
 
                 self.append_instruction(Instruction::CompareJump(
-                    controlling_loc,
+                    controlling_loc.clone(),
                     false,
                     post_label,
                 ));
+
+                self.dealloc_reg(controlling_loc.downgrade());
 
                 self.append_from_statement(body);
                 self.append_instruction(Instruction::PostConditional(evaluate_label, post_label))
@@ -115,8 +129,9 @@ impl Bytecode<'_> {
 
                 let lhs = self.upgrade_readable(lhs);
 
-                self.append_instruction(Instruction::BinaryOp(*op, lhs.clone(), rhs));
+                self.append_instruction(Instruction::BinaryOp(*op, lhs.clone(), rhs.clone()));
 
+                self.dealloc_reg(rhs);
                 lhs.downgrade()
             }
             Expression::UnaryOp { expr, op } => {

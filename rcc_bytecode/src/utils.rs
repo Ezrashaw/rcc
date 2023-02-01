@@ -12,6 +12,9 @@ impl Bytecode<'_> {
 
         self.allocated_registers.push(loc.clone());
 
+        // println!("alloc reg {loc:?}, here:");
+        // println!("{}", std::backtrace::Backtrace::force_capture());
+
         loc
     }
 
@@ -25,6 +28,9 @@ impl Bytecode<'_> {
                 .expect("provided register was not allocated");
 
             self.allocated_registers.swap_remove(idx);
+
+            // println!("dealloc reg {idx}, here:");
+            // println!("{}", std::backtrace::Backtrace::force_capture());
         }
     }
 
