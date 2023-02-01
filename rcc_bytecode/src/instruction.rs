@@ -7,9 +7,8 @@ use rcc_structures::{BinOp, UnaryOp};
 /// (the x86 backend overflows registers to the stack)
 #[derive(Debug, Clone)]
 pub enum Instruction {
-    /// Loads a constant integer into the given location.
-    // FIXME: should this really be a readloc->writeloc conversion?
-    LoadInt(i32, WriteLocation),
+    /// Moves a value from one location into another.
+    Move(ReadLocation, WriteLocation),
 
     /// Returns the value from the given location.
     Return(ReadLocation),
@@ -27,21 +26,21 @@ pub enum Instruction {
     /// Applies the given unary operation to the specified location.
     UnaryOp(UnaryOp, WriteLocation),
 
-    /// Short-circuit a logical boolean binary operation:
+    /// If the given location is equal to `bool` (in the C style: all non-zero
+    /// integers are truthy), then jump to the specified location.
     ///
-    /// If `bool` is true, then short-circuit when loc is true (logical or).
-    /// If `bool` is false, then short-circuit when loc is false (logical and).
+    /// Used in loops to exit if the the condition is false, and in
+    /// short-circuiting binary boolean operations.
     ///
-    /// The second `u32` points to the end of the second sub-expression (short-circuit).
-    /// 
-    /// HACK: currently this needs a [`WriteLocation`], x86 cannot compare two constants (fair enough). 
+    /// *HACK*: currently this needs a [`WriteLocation`], x86 cannot compare two constants (fair enough).
     // FIXME: see doc-comment
-    ShortCircuit(WriteLocation, bool, u32),
+    CompareJump(WriteLocation, bool, u32),
 
     /// Normalize the second clause of a logical boolean binary operation
     /// (i.e. make all non-zero = 1)
     ///
-    /// Also provides position for [`Instruction::ShortCircuit`] to jump to.
+    /// Also provides position for [`Instruction::CompareJump`] to jump to.
+    // FIXME: I don't like the operation-specific bytecode instructions.
     BinaryBooleanOp(WriteLocation, u32),
 
     /// Modifies/declares a local variable.
@@ -60,19 +59,19 @@ pub enum Instruction {
     /// through to the true branch.
     IfThen(u32, ReadLocation),
 
-    /// An instruction which comes after a if statement, it jumps over the else
-    /// statement (jumps to the [`Instruction::PostConditionalDummy`]).
+    /// An instruction which comes after a conditional expressions to
+    /// jump to a location and also define a location.
     ///
-    /// Also specifies the start of the false branch, jumped to by
-    /// [`Instruction::IfThen`].
-    PostIf(u32, u32),
+    /// Used in `if` statements and loops.
+    PostConditional(u32, u32),
 
-    /// An instruction which specifies where [`Instruction::PostIf`] or
-    /// [`Instruction::IfThen`] should jump to, it appears after a conditional
-    /// statement.
+    /// An instruction which specifies where another instruction should jump
+    /// to.
+    ///
+    /// Effectively expands to (in the x86 backend) a label.
     // FIXME: remove this, we could fix this with instruction addressing
     //        instead of the ad-hoc allocation currently.
-    PostConditionalDummy(u32),
+    JumpDummy(u32),
 }
 
 /// Someplace where a value can be read.

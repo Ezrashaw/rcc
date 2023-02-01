@@ -33,7 +33,10 @@ impl Bytecode<'_> {
             ReadLocation::Writable(wloc) => wloc,
             ReadLocation::Constant(val) => {
                 let reg = self.alloc_reg();
-                self.append_instruction(Instruction::LoadInt(val, reg.clone()));
+                self.append_instruction(Instruction::Move(
+                    ReadLocation::Constant(val),
+                    reg.clone(),
+                ));
 
                 reg
             }

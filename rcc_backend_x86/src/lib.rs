@@ -67,8 +67,13 @@ impl X86Backend {
         write!(self.buf, "{0}# {instruction:?}\n{0}", self.indent())?;
 
         match instruction {
-            Instruction::LoadInt(val, reg) => {
-                writeln!(self.buf, "movl ${val}, %{}", Register::from_u8(reg.reg()))?;
+            Instruction::Move(from, to) => {
+                writeln!(
+                    self.buf,
+                    "movl {}, {}",
+                    Self::rloc_to_asm(from),
+                    Self::wloc_to_asm(to)
+                )?;
             }
 
             Instruction::Return(loc) => writeln!(
@@ -83,10 +88,10 @@ impl X86Backend {
             Instruction::BinaryOp(op, lhs, rhs) => self.write_binop(*op, lhs, rhs)?,
             Instruction::UnaryOp(op, loc) => self.write_unary_op(*op, loc)?,
 
-            Instruction::ShortCircuit(rloc, should_short, jump_loc) => writeln!(
+            Instruction::CompareJump(rloc, should_short, jump_loc) => writeln!(
                 self.buf,
-                "cmpl $0, {} # check if e1 is true\n{}\
-                {} _{jump_loc}  # e1 is 0, we don't need to evaluate clause 2",
+                "cmpl $0, {} # check if expr is true\n{}\
+                {} _{jump_loc}  # if so, jump",
                 Self::wloc_to_asm(rloc),
                 self.indent(),
                 if *should_short { "jne" } else { "je" }
@@ -120,11 +125,11 @@ impl X86Backend {
                 Self::rloc_to_asm(rloc),
                 self.indent()
             )?,
-            Instruction::PostIf(post_else, pre_else) => {
+            Instruction::PostConditional(post_else, pre_else) => {
                 writeln!(self.buf, "jmp _{post_else}\n_{pre_else}:")?;
             }
             // FIXME: gah, this messes up the formatting
-            Instruction::PostConditionalDummy(post_else) => writeln!(self.buf, "_{post_else}:")?,
+            Instruction::JumpDummy(post_else) => writeln!(self.buf, "_{post_else}:")?,
         }
 
         writeln!(self.buf)
@@ -154,8 +159,8 @@ impl X86Backend {
             BinOp::Mul => writeln!(self.buf, "imul {rhs_str}, {lhs_str} # into {lhs_str}"),
 
             // x86 division (`idiv`) requires the dividend to be in EDX:EAX, and
-            // the divisor register is passed separately. This means we must put
-            // EAX and EDX on the stack while we do the division.
+            // the divisor register is passed separately. This is fine as we
+            // don't use EAX or EDX as allocatable registers.
             BinOp::Div => write!(
                 self.buf,
                 "movl {lhs_str}, %eax\n{0}\

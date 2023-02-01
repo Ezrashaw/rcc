@@ -70,7 +70,7 @@ impl Bytecode<'_> {
 
                     let lhs = self.upgrade_readable(lhs);
 
-                    self.append_instruction(Instruction::ShortCircuit(
+                    self.append_instruction(Instruction::CompareJump(
                         lhs.clone(),
                         *op == BinOp::LogicalOr,
                         label,
@@ -148,14 +148,14 @@ impl Bytecode<'_> {
 
                 let true_reg = self.append_from_expression(if_true);
                 let true_reg = self.upgrade_readable(true_reg).downgrade();
-                self.append_instruction(Instruction::PostIf(post_else, pre_else));
+                self.append_instruction(Instruction::PostConditional(post_else, pre_else));
 
                 // FIXME: this all assumes that the same reg is allocated, completely flawed.
                 self.dealloc_reg(true_reg);
 
                 let false_reg = self.append_from_expression(if_false);
                 let false_reg = self.upgrade_readable(false_reg).downgrade();
-                self.append_instruction(Instruction::PostConditionalDummy(post_else));
+                self.append_instruction(Instruction::JumpDummy(post_else));
 
                 false_reg
             }
@@ -185,10 +185,10 @@ impl Bytecode<'_> {
             self.append_instruction(Instruction::IfThen(pre_else, controlling));
 
             self.append_from_statement(true_branch);
-            self.append_instruction(Instruction::PostIf(post_else, pre_else));
+            self.append_instruction(Instruction::PostConditional(post_else, pre_else));
 
             self.append_from_statement(false_branch);
-            self.append_instruction(Instruction::PostConditionalDummy(post_else));
+            self.append_instruction(Instruction::JumpDummy(post_else));
         } else {
             self.label_counter += 1;
             let post_conditional = self.label_counter - 1;
@@ -196,7 +196,7 @@ impl Bytecode<'_> {
             self.append_instruction(Instruction::IfThen(post_conditional, controlling));
 
             self.append_from_statement(true_branch);
-            self.append_instruction(Instruction::PostConditionalDummy(post_conditional));
+            self.append_instruction(Instruction::JumpDummy(post_conditional));
         }
     }
 }
