@@ -197,12 +197,11 @@ impl Bytecode<'_> {
         match expr {
             Expression::BinOp { lhs, rhs, op, .. } => {
                 let lhs = self.append_from_expression(lhs);
+                let lhs = self.upgrade_readable(lhs);
 
                 if let BinOp::LogicalAnd | BinOp::LogicalOr = op {
                     let label = self.label_counter;
                     self.label_counter += 1;
-
-                    let lhs = self.upgrade_readable(lhs);
 
                     self.append_instruction(Instruction::CompareJump(
                         lhs.clone(),
@@ -228,8 +227,6 @@ impl Bytecode<'_> {
                 } else {
                     rhs
                 };
-
-                let lhs = self.upgrade_readable(lhs);
 
                 self.append_instruction(Instruction::BinaryOp(*op, lhs.clone(), rhs.clone()));
 
