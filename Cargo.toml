@@ -9,5 +9,6 @@ members = [
     "rcc_main",
     "rcc_structures",
     "rcc_opt",
-    "rcc_backend_llvm"
+    "rcc_backend_llvm",
+    "rcc_backend_arm",
 ]

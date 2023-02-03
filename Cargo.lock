@@ -9,6 +9,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca84ba11ed2de09f9a946e35be5efe5382bdd0621780b46ea8e24a7797b5be88"
 
 [[package]]
+name = "rcc_backend_arm"
+version = "0.0.0"
+dependencies = [
+ "rcc_bytecode",
+ "rcc_structures",
+]
+
+[[package]]
 name = "rcc_backend_llvm"
 version = "0.0.0"
 dependencies = [
@@ -52,6 +60,7 @@ dependencies = [
 name = "rcc_main"
 version = "0.0.0"
 dependencies = [
+ "rcc_backend_arm",
  "rcc_backend_llvm",
  "rcc_backend_x86",
  "rcc_bytecode",

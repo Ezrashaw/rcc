@@ -4,6 +4,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+use rcc_backend_arm::ArmBackend;
 use rcc_backend_llvm::LlvmBackend;
 use rcc_backend_x86::X86Backend;
 use rcc_bytecode::Bytecode;
@@ -131,19 +132,7 @@ fn compile_program_verbose(input: &str) -> String {
     }
     println!("===================");
 
-    let assembly = if USE_LLVM {
-        LlvmBackend::gen_llvm(&bytecode)
-    } else {
-        X86Backend::gen_x86(&bytecode)
-    };
-    println!(
-        "===== {} =====",
-        if USE_LLVM { "LLVM IR" } else { "x86 ASM" }
-    );
-    print!("{assembly}");
-    println!("===================");
-
-    assembly
+    gen_asm(&bytecode, true)
 }
 
 fn compile_program(input: &str) -> String {
@@ -158,9 +147,45 @@ fn compile_program(input: &str) -> String {
 
     let bytecode = Bytecode::from_function(&ast.function);
 
-    if USE_LLVM {
+    gen_asm(&bytecode, false)
+}
+
+fn gen_asm(bytecode: &Bytecode, verbose: bool) -> String {
+    if verbose {
+        print!("====== ");
+    }
+
+    let asm = if USE_LLVM {
+        if verbose {
+            print!("LLVM IR");
+        }
         LlvmBackend::gen_llvm(&bytecode)
     } else {
-        X86Backend::gen_x86(&bytecode)
+        let arch = std::env::consts::ARCH;
+        match arch {
+            "aarch64" => {
+                if verbose {
+                    print!("ARM ASSEMBLY");
+                }
+
+                ArmBackend::gen_arm(&bytecode)
+            }
+            "x86_64" => {
+                if verbose {
+                    print!("x86 ASSEMBLY");
+                }
+
+                X86Backend::gen_x86(&bytecode)
+            }
+            _ => panic!("unsupported architecture"),
+        }
+    };
+
+    if verbose {
+        println!(" ======");
+        print!("{asm}");
+        println!("===========");
     }
+
+    asm
 }
