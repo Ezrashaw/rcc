@@ -43,7 +43,11 @@ impl ArmBackend {
     }
 
     fn write_function(&mut self, name: &str, bytecode: &[Instruction]) -> fmt::Result {
-        writeln!(self.buf, ".globl {name}\n{name}:")?;
+        if std::env::consts::OS == "macos" {
+            writeln!(self.buf, ".globl _{name}\n_{name}:")?;
+        } else {
+            writeln!(self.buf, ".globl {name}\n{name}:")?;
+        }
 
         self.indent_lvl = 1;
 
