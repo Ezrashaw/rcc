@@ -39,6 +39,9 @@ impl Bytecode<'_> {
             ReadLocation::Constant(0)
         };
 
+        // aarch64 limitations
+        let reg = self.upgrade_readable(reg).downgrade();
+
         self.append_instruction(Instruction::AssignVariable(*id, reg.clone()));
         self.dealloc_reg(reg);
     }
@@ -221,6 +224,20 @@ impl Bytecode<'_> {
 
                 let rhs = self.append_from_expression(rhs);
 
+                // aarch64 requires that the RHS for these binary operaors are in registers.
+                let rhs = if let BinOp::Mul
+                | BinOp::GreaterThan
+                | BinOp::GreaterThanOrEquals
+                | BinOp::LessThan
+                | BinOp::LessThanOrEquals
+                | BinOp::NotEquals
+                | BinOp::Equals = op
+                {
+                    self.upgrade_readable(rhs).downgrade()
+                } else {
+                    rhs
+                };
+
                 // FIXME: hack because `idiv` on x86 cannot take immediate (constant) rhs values.
                 let rhs = if let BinOp::Div = op {
                     self.upgrade_readable(rhs).downgrade()
@@ -247,6 +264,9 @@ impl Bytecode<'_> {
                 expression,
             } => {
                 let reg = self.append_from_expression(expression);
+                // aarch64 limitations
+                let reg = self.upgrade_readable(reg).downgrade();
+
                 self.append_instruction(Instruction::AssignVariable(*identifier, reg.clone()));
 
                 reg
