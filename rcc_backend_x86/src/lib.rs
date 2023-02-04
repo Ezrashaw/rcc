@@ -64,11 +64,6 @@ impl Backend for X86Backend {
                 write_asm!(ctx, "movl {}, {}", Self::var(var), Self::wl(wl));
             }
 
-            Instruction::IfThen(false_branch, rl) => {
-                write_asm!(ctx, "cmpl $0, {}", Self::rl(rl));
-                write_asm!(ctx, "je _{false_branch}");
-            }
-
             Instruction::PostConditional(post_else, pre_else) => {
                 write_asm!(ctx, "jmp _{post_else}");
                 write_asm_no_indent!(ctx, "_{pre_else}:");

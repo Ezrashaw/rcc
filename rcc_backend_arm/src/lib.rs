@@ -118,12 +118,6 @@ impl ArmBackend {
                 32 - (var + 1) * 4
             )?,
 
-            Instruction::IfThen(pre_else, rloc) => writeln!(
-                self.buf,
-                "cmp {}, #0\n{}beq _{pre_else}",
-                Self::rloc_to_asm(rloc),
-                self.indent()
-            )?,
             Instruction::PostConditional(post_else, pre_else) => {
                 writeln!(self.buf, "b _{post_else}\n_{pre_else}:")?;
             }

@@ -286,17 +286,17 @@ impl Bytecode<'_> {
                 let controlling = self.append_from_expression(controlling);
 
                 // FIXME: you know the deal, x86 constraints. GAHH, it's also below.
-                let controlling = self.upgrade_readable(controlling).downgrade();
+                let controlling = self.upgrade_readable(controlling);
 
                 // the first instructions to be encountered from here will read the reg
                 // and redirect control flow; it is no longer needed.
-                self.dealloc_reg(controlling.clone());
+                self.dealloc_reg(controlling.clone().downgrade());
 
                 self.label_counter += 2;
                 let post_else = self.label_counter - 1;
                 let pre_else = self.label_counter - 2;
 
-                self.append_instruction(Instruction::IfThen(pre_else, controlling));
+                self.append_instruction(Instruction::CompareJump(controlling, false, pre_else));
 
                 let true_reg = self.append_from_expression(if_true);
                 let true_reg = self.upgrade_readable(true_reg).downgrade();
@@ -323,18 +323,18 @@ impl Bytecode<'_> {
         let controlling = self.append_from_expression(expr);
 
         // FIXME: you know the deal, x86 constraints
-        let controlling = self.upgrade_readable(controlling).downgrade();
+        let controlling = self.upgrade_readable(controlling);
 
         // the first instructions to be encountered from here will read the reg
         // and redirect control flow; it is no longer needed.
-        self.dealloc_reg(controlling.clone());
+        self.dealloc_reg(controlling.clone().downgrade());
 
         if let Some(false_branch) = false_branch {
             self.label_counter += 2;
             let post_else = self.label_counter - 1;
             let pre_else = self.label_counter - 2;
 
-            self.append_instruction(Instruction::IfThen(pre_else, controlling));
+            self.append_instruction(Instruction::CompareJump(controlling, false, pre_else));
 
             self.append_from_statement(true_branch);
             self.append_instruction(Instruction::PostConditional(post_else, pre_else));
@@ -345,7 +345,11 @@ impl Bytecode<'_> {
             self.label_counter += 1;
             let post_conditional = self.label_counter - 1;
 
-            self.append_instruction(Instruction::IfThen(post_conditional, controlling));
+            self.append_instruction(Instruction::CompareJump(
+                controlling,
+                false,
+                post_conditional,
+            ));
 
             self.append_from_statement(true_branch);
             self.append_instruction(Instruction::JumpDummy(post_conditional));

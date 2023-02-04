@@ -55,10 +55,6 @@ pub enum Instruction {
     /// stack offsets.
     LoadVariable(u32, WriteLocation),
 
-    /// Checks the given location and either jumps to the false branch or falls
-    /// through to the true branch.
-    IfThen(u32, ReadLocation),
-
     /// An instruction which comes after a conditional expressions to
     /// jump to a location and also define a location.
     ///
