@@ -457,7 +457,7 @@ impl_binop! {
         4 = BinOp::Equals | BinOp::NotEquals,
         3 = BinOp::LessThan | BinOp::LessThanOrEquals | BinOp::GreaterThan | BinOp::GreaterThanOrEquals,
         2 = BinOp::Add | BinOp::Sub,
-        1 = BinOp::Mul | BinOp::Div,
+        1 = BinOp::Mul | BinOp::Div | BinOp::Modulo,
     };
     {
         TokenKind::DoublePipe => BinOp::LogicalOr,
@@ -473,5 +473,6 @@ impl_binop! {
         TokenKind::Minus => BinOp::Sub,
         TokenKind::Star => BinOp::Mul,
         TokenKind::Slash => BinOp::Div,
+        TokenKind::Percent => BinOp::Modulo,
     }
 }

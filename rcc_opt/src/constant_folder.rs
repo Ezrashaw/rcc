@@ -25,6 +25,7 @@ impl ConstantFolder {
                     BinOp::Sub => Some(lhs - rhs),
                     BinOp::Mul => Some(lhs * rhs),
                     BinOp::Div => Some(lhs / rhs),
+                    BinOp::Modulo => Some(lhs % rhs),
                     BinOp::LogicalOr => Some(i32::from((lhs != 0) || (rhs != 0))),
                     BinOp::LogicalAnd => Some(i32::from((lhs != 0) && (rhs != 0))),
                     BinOp::Equals => Some(i32::from(lhs == rhs)),

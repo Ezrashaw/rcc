@@ -242,7 +242,7 @@ impl Bytecode<'_> {
                 };
 
                 // FIXME: hack because `idiv` on x86 cannot take immediate (constant) rhs values.
-                let rhs = if let BinOp::Div = op {
+                let rhs = if let BinOp::Div | BinOp::Modulo = op {
                     self.upgrade_readable(rhs).downgrade()
                 } else {
                     rhs

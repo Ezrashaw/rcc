@@ -31,6 +31,7 @@ pub enum TokenKind<'a> {
     Slash,
     Equals,
     QuestionMark,
+    Percent,
 
     DoubleAnd,
     DoublePipe,
@@ -81,6 +82,7 @@ const_tokens! {
     "*" => TokenKind::Star,
     "/" => TokenKind::Slash,
     "?" => TokenKind::QuestionMark,
+    "%" => TokenKind::Percent,
 
     // double-char operators
     "&&" => TokenKind::DoubleAnd,

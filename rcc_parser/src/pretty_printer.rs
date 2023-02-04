@@ -148,6 +148,7 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
                         BinOp::Sub => "-",
                         BinOp::Mul => "*",
                         BinOp::Div => "/",
+                        BinOp::Modulo => "%",
                         BinOp::LogicalOr => "||",
                         BinOp::LogicalAnd => "&&",
                         BinOp::Equals => "==",

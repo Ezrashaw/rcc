@@ -148,6 +148,7 @@ impl ArmBackend {
             BinOp::Sub => writeln!(self.buf, "sub  {lhs_str}, {lhs_str}, {rhs_str}"),
             BinOp::Mul => writeln!(self.buf, "mul  {lhs_str}, {lhs_str}, {rhs_str}"),
             BinOp::Div => writeln!(self.buf, "sdiv {lhs_str}, {lhs_str}, {rhs_str}"),
+            BinOp::Modulo => todo!(),
 
             op @ (BinOp::Equals
             | BinOp::NotEquals

@@ -122,6 +122,13 @@ impl X86Backend {
                 write_asm!(ctx, "idiv {rh}");
                 write_asm!(ctx, "movl %eax, {lh}");
             }
+            BinOp::Modulo => {
+                // same as division, we can just use EDX for the remainder.
+                write_asm!(ctx, "movl {lh}, %eax");
+                write_asm!(ctx, "cdq");
+                write_asm!(ctx, "idiv {rh}");
+                write_asm!(ctx, "movl %edx, {lh}");
+            }
 
             op @ (BinOp::Equals
             | BinOp::NotEquals

@@ -11,6 +11,7 @@ pub enum BinOp {
     Sub,
     Mul,
     Div,
+    Modulo,
 
     LogicalOr,
     LogicalAnd,
