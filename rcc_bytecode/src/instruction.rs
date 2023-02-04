@@ -55,12 +55,6 @@ pub enum Instruction {
     /// stack offsets.
     LoadVariable(u32, WriteLocation),
 
-    /// An instruction which comes after a conditional expressions to
-    /// jump to a location and also define a location.
-    ///
-    /// Used in `if` statements and loops.
-    PostConditional(u32, u32),
-
     /// An instruction which specifies where another instruction should jump
     /// to.
     ///
@@ -72,7 +66,6 @@ pub enum Instruction {
     /// Performs an unconditional jump to the specififed location.
     ///
     /// One-to-one mapping to the x86 JMP instruction.
-    // FIXME: remove, use some other thing
     UnconditionalJump(u32),
 }
 

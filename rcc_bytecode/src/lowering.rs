@@ -86,7 +86,8 @@ impl Bytecode<'_> {
                 self.dealloc_reg(controlling_loc.downgrade());
 
                 self.append_from_statement(body);
-                self.append_instruction(Instruction::PostConditional(evaluate_label, post_label));
+                self.append_instruction(Instruction::UnconditionalJump(evaluate_label));
+                self.append_instruction(Instruction::JumpDummy(post_label));
 
                 self.loop_start.pop();
                 self.loop_end.pop();
@@ -184,7 +185,8 @@ impl Bytecode<'_> {
             self.dealloc_reg(reg);
         }
 
-        self.append_instruction(Instruction::PostConditional(pre_condition, post_loop));
+        self.append_instruction(Instruction::UnconditionalJump(pre_condition));
+        self.append_instruction(Instruction::JumpDummy(post_loop));
 
         self.loop_start.pop();
         self.loop_end.pop();
@@ -300,7 +302,8 @@ impl Bytecode<'_> {
 
                 let true_reg = self.append_from_expression(if_true);
                 let true_reg = self.upgrade_readable(true_reg).downgrade();
-                self.append_instruction(Instruction::PostConditional(post_else, pre_else));
+                self.append_instruction(Instruction::UnconditionalJump(post_else));
+                self.append_instruction(Instruction::JumpDummy(pre_else));
 
                 // FIXME: this all assumes that the same reg is allocated, completely flawed.
                 self.dealloc_reg(true_reg);
@@ -337,7 +340,8 @@ impl Bytecode<'_> {
             self.append_instruction(Instruction::CompareJump(controlling, false, pre_else));
 
             self.append_from_statement(true_branch);
-            self.append_instruction(Instruction::PostConditional(post_else, pre_else));
+            self.append_instruction(Instruction::UnconditionalJump(post_else));
+            self.append_instruction(Instruction::JumpDummy(pre_else));
 
             self.append_from_statement(false_branch);
             self.append_instruction(Instruction::JumpDummy(post_else));

@@ -64,11 +64,6 @@ impl Backend for X86Backend {
                 write_asm!(ctx, "movl {}, {}", Self::var(var), Self::wl(wl));
             }
 
-            Instruction::PostConditional(post_else, pre_else) => {
-                write_asm!(ctx, "jmp _{post_else}");
-                write_asm_no_indent!(ctx, "_{pre_else}:");
-            }
-
             Instruction::JumpDummy(loc) => write_asm_no_indent!(ctx, "_{loc}:"),
             Instruction::UnconditionalJump(loc) => write_asm!(ctx, "jmp _{loc}"),
 

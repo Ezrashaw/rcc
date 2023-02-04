@@ -117,10 +117,7 @@ impl ArmBackend {
                 Self::wloc_to_asm(wloc),
                 32 - (var + 1) * 4
             )?,
-
-            Instruction::PostConditional(post_else, pre_else) => {
-                writeln!(self.buf, "b _{post_else}\n_{pre_else}:")?;
-            }
+            
             // FIXME: gah, this messes up the formatting
             Instruction::JumpDummy(post_else) => writeln!(self.buf, "_{post_else}:")?,
             Instruction::UnconditionalJump(loc) => writeln!(self.buf, "b _{loc}")?,
