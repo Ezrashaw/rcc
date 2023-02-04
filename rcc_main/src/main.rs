@@ -175,7 +175,7 @@ fn gen_asm(bytecode: &Bytecode, verbose: bool) -> String {
                     print!("x86 ASSEMBLY");
                 }
 
-                X86Backend::gen_x86(&bytecode)
+                rcc_backend_traits::generate_assembly(&bytecode, &mut X86Backend)
             }
             _ => panic!("unsupported architecture"),
         }

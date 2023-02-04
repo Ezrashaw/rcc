@@ -25,9 +25,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rcc_backend_traits"
+version = "0.0.0"
+dependencies = [
+ "rcc_bytecode",
+]
+
+[[package]]
 name = "rcc_backend_x86"
 version = "0.0.0"
 dependencies = [
+ "rcc_backend_traits",
  "rcc_bytecode",
  "rcc_structures",
 ]
@@ -62,6 +70,7 @@ version = "0.0.0"
 dependencies = [
  "rcc_backend_arm",
  "rcc_backend_llvm",
+ "rcc_backend_traits",
  "rcc_backend_x86",
  "rcc_bytecode",
  "rcc_lexer",

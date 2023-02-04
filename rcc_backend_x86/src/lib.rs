@@ -1,197 +1,157 @@
-use core::{fmt, panic};
-use rcc_bytecode::{Bytecode, Instruction, ReadLocation, WriteLocation};
+use core::panic;
+use rcc_backend_traits::{write_asm, write_asm_no_indent, Backend, BackendContext};
+use rcc_bytecode::{Instruction, ReadLocation, WriteLocation};
 use rcc_structures::{BinOp, UnaryOp};
 use register::Register;
 use std::fmt::Write;
 
 mod register;
 
-pub struct X86Backend {
-    buf: String,
-    indent_lvl: u32,
+pub struct X86Backend;
+
+impl Backend for X86Backend {
+    fn write_function(&mut self, ctx: &mut BackendContext, fn_name: &str) {
+        // FIXME: can we make this generic for all backends?
+        if std::env::consts::OS == "macos" {
+            write_asm!(ctx, ".globl _{fn_name}\n_{fn_name}:");
+        } else {
+            write_asm!(ctx, ".globl {fn_name}\n{fn_name}:");
+        }
+
+        ctx.increment_indent();
+
+        // write function prologue, sets up a stack frame
+        write_asm!(ctx, "pushq %rbp         # save old value of RBP");
+        write_asm!(
+            ctx,
+            "movq %rsp, %rbp    # current top of stack is bottom of new stack frame"
+        );
+    }
+
+    fn write_instruction(&mut self, ctx: &mut BackendContext, instruction: &Instruction) {
+        match instruction {
+            Instruction::Move(from, to) => {
+                write_asm!(ctx, "movl {}, {}", Self::rl(from), Self::wl(to))
+            }
+
+            Instruction::Return(val) => {
+                write_asm!(ctx, "movl {}, %eax", Self::rl(val));
+                write_asm!(
+                    ctx,
+                    "pop %rbp # restore old RBP; now RSP is where it was before prologue"
+                );
+                write_asm!(ctx, "ret");
+            }
+            Instruction::CompareJump(val, should_jump, jump_loc) => {
+                write_asm!(ctx, "cmpl $0, {} # check if expr is true", Self::wl(val));
+                write_asm!(
+                    ctx,
+                    "j{} _{jump_loc}  # if so, jump",
+                    if *should_jump { "ne" } else { "e" }
+                );
+            }
+
+            Instruction::BinaryBooleanOp(wl, jump_loc) => {
+                write_asm!(ctx, "cmpl $0, {}  # check if e2 is true", Self::wl(wl));
+                write_asm!(ctx, "setne %{}", Register::from_u8(wl.reg()).get_low_8());
+                write_asm_no_indent!(ctx, "_{jump_loc}: # short-circuit jump label");
+            }
+
+            Instruction::AssignVariable(var, rl) => {
+                write_asm!(ctx, "movl {}, {}", Self::rl(rl), Self::var(var));
+            }
+            Instruction::LoadVariable(var, wl) => {
+                write_asm!(ctx, "movl {}, {}", Self::var(var), Self::wl(wl));
+            }
+
+            Instruction::IfThen(false_branch, rl) => {
+                write_asm!(ctx, "cmpl $0, {}", Self::rl(rl));
+                write_asm!(ctx, "je _{false_branch}");
+            }
+
+            Instruction::PostConditional(post_else, pre_else) => {
+                write_asm!(ctx, "jmp _{post_else}");
+                write_asm_no_indent!(ctx, "_{pre_else}:");
+            }
+
+            Instruction::JumpDummy(loc) => write_asm_no_indent!(ctx, "_{loc}:"),
+            Instruction::UnconditionalJump(loc) => write_asm!(ctx, "jmp _{loc}"),
+
+            Instruction::BinaryOp(op, lhs, rhs) => Self::write_binary_op(ctx, *op, lhs, rhs),
+            Instruction::UnaryOp(op, wl) => Self::write_unary_op(ctx, *op, wl),
+        }
+    }
 }
 
 impl X86Backend {
-    pub fn gen_x86(bytecode: &Bytecode<'_>) -> String {
-        let mut backend = Self {
-            buf: String::new(),
-            indent_lvl: 0,
-        };
-
-        backend
-            .write_function(bytecode.fn_name(), bytecode.instructions())
-            .unwrap();
-
-        backend.buf
-    }
-
-    fn indent(&self) -> &'static str {
-        match self.indent_lvl {
-            1 => "    ",
-            _ => panic!("too much indent"),
-        }
-    }
-
-    fn wloc_to_asm(loc: &WriteLocation) -> String {
+    fn wl(loc: &WriteLocation) -> String {
         format!("%{}", Register::from_u8(loc.reg()))
     }
 
-    fn rloc_to_asm(loc: &ReadLocation) -> String {
+    fn rl(loc: &ReadLocation) -> String {
         match loc {
-            ReadLocation::Writable(wloc) => Self::wloc_to_asm(wloc),
+            ReadLocation::Writable(wloc) => Self::wl(wloc),
             ReadLocation::Constant(val) => format!("${val}"),
         }
     }
 
-    fn write_function(&mut self, name: &str, bytecode: &[Instruction]) -> fmt::Result {
-        if std::env::consts::OS == "macos" {
-            writeln!(self.buf, ".globl _{name}\n_{name}:")?;
-        } else {
-            writeln!(self.buf, ".globl {name}\n{name}:")?;
-        }
-
-        self.indent_lvl = 1;
-
-        // write function prologue, sets up a stack frame
-        writeln!(
-            self.buf,
-            "{0}pushq %rbp         # save old value of RBP\n{0}\
-            movq %rsp, %rbp    # current top of stack is bottom of new stack frame\n",
-            self.indent()
-        )?;
-
-        for instr in bytecode {
-            self.write_instruction(instr)?;
-        }
-
-        Ok(())
+    fn var(id: &u32) -> String {
+        format!("-{}(%rbp)", (id + 1) * 4)
     }
 
-    fn write_instruction(&mut self, instruction: &Instruction) -> fmt::Result {
-        write!(self.buf, "{0}# {instruction:?}\n{0}", self.indent())?;
-
-        match instruction {
-            Instruction::Move(from, to) => {
-                writeln!(
-                    self.buf,
-                    "movl {}, {}",
-                    Self::rloc_to_asm(from),
-                    Self::wloc_to_asm(to)
-                )?;
-            }
-
-            Instruction::Return(loc) => writeln!(
-                self.buf,
-                "movl {1}, %eax\n{0}\
-                pop %rbp        # restore old RBP; now RSP is where it was before prologue\n{0}\
-                ret",
-                self.indent(),
-                Self::rloc_to_asm(loc),
-            )?,
-
-            Instruction::BinaryOp(op, lhs, rhs) => self.write_binop(*op, lhs, rhs)?,
-            Instruction::UnaryOp(op, loc) => self.write_unary_op(*op, loc)?,
-
-            Instruction::CompareJump(rloc, should_jump, jump_loc) => writeln!(
-                self.buf,
-                "cmpl $0, {} # check if expr is true\n{}\
-                {} _{jump_loc}  # if so, jump",
-                Self::wloc_to_asm(rloc),
-                self.indent(),
-                if *should_jump { "jne" } else { "je" }
-            )?,
-            Instruction::BinaryBooleanOp(wloc, jump_loc) => writeln!(
-                self.buf,
-                "cmpl $0, {}  # check if e2 is true\n{}\
-                setne %{}      # set AL register (the low byte of EAX) to 1 iff e2 != 0\n\
-            _{jump_loc}: # short-circuit jump label",
-                Self::wloc_to_asm(wloc),
-                self.indent(),
-                Register::from_u8(wloc.reg()).get_low_8()
-            )?,
-
-            Instruction::AssignVariable(var, rloc) => writeln!(
-                self.buf,
-                "movl {}, -{}(%rbp)",
-                Self::rloc_to_asm(rloc),
-                (var + 1) * 4
-            )?,
-            Instruction::LoadVariable(var, wloc) => writeln!(
-                self.buf,
-                "movl -{}(%rbp), {}",
-                (var + 1) * 4,
-                Self::wloc_to_asm(wloc)
-            )?,
-
-            Instruction::IfThen(pre_else, rloc) => writeln!(
-                self.buf,
-                "cmpl $0, {}\n{}je _{pre_else}",
-                Self::rloc_to_asm(rloc),
-                self.indent()
-            )?,
-            Instruction::PostConditional(post_else, pre_else) => {
-                writeln!(self.buf, "jmp _{post_else}\n_{pre_else}:")?;
-            }
-            // FIXME: gah, this messes up the formatting
-            Instruction::JumpDummy(post_else) => writeln!(self.buf, "_{post_else}:")?,
-            Instruction::UnconditionalJump(loc) => writeln!(self.buf, "jmp _{loc}")?,
-        }
-
-        writeln!(self.buf)
-    }
-
-    fn write_unary_op(&mut self, op: UnaryOp, wloc: &WriteLocation) -> fmt::Result {
-        let wloc_str = Self::wloc_to_asm(wloc);
+    fn write_unary_op(ctx: &mut BackendContext, op: UnaryOp, loc: &WriteLocation) {
+        let wl = Self::wl(loc);
         match op {
-            UnaryOp::Negation => writeln!(self.buf, "neg {wloc_str}"),
-            UnaryOp::BitwiseComplement => writeln!(self.buf, "not {wloc_str}"),
-            UnaryOp::LogicalNegation => writeln!(
-                self.buf,
-                "cmpl   $0, {wloc_str}     # set ZF on if exp == 0, set it off otherwise\n{0}\
-                sete   %{1}          # set {1} register (the lower byte of {wloc_str}) to 1 if ZF is on, note that this clears {wloc_str}",
-                self.indent(),
-                Register::from_u8(wloc.reg()).get_low_8()
-            ),
+            UnaryOp::Negation => write_asm!(ctx, "neg {wl}"),
+            UnaryOp::BitwiseComplement => write_asm!(ctx, "not {wl}"),
+            UnaryOp::LogicalNegation => {
+                write_asm!(ctx, "cmpl   $0, {wl}");
+                write_asm!(ctx, "sete %{}", Register::from_u8(loc.reg()).get_low_8());
+            }
         }
     }
 
-    fn write_binop(&mut self, op: BinOp, lhs: &WriteLocation, rhs: &ReadLocation) -> fmt::Result {
-        let lhs_str = Self::wloc_to_asm(lhs);
-        let rhs_str = Self::rloc_to_asm(rhs);
-        match op {
-            BinOp::Add => writeln!(self.buf, "addl {rhs_str}, {lhs_str} # into {lhs_str}"),
-            BinOp::Sub => writeln!(self.buf, "subl {rhs_str}, {lhs_str} # into {lhs_str}"),
-            BinOp::Mul => writeln!(self.buf, "imul {rhs_str}, {lhs_str} # into {lhs_str}"),
+    fn write_binary_op(
+        ctx: &mut BackendContext,
+        op: BinOp,
+        lhs: &WriteLocation,
+        rhs: &ReadLocation,
+    ) {
+        let lh = Self::wl(lhs);
+        let rh = Self::rl(rhs);
 
-            // x86 division (`idiv`) requires the dividend to be in EDX:EAX, and
-            // the divisor register is passed separately. This is fine as we
-            // don't use EAX or EDX as allocatable registers.
-            BinOp::Div => write!(
-                self.buf,
-                "movl {lhs_str}, %eax\n{0}\
-                cdq\n{0}\
-                idiv {rhs_str}\n{0}\
-                movl %eax, {lhs_str}\n{0}",
-                self.indent()
-            ),
+        match op {
+            BinOp::Add => write_asm!(ctx, "addl {rh}, {lh}"),
+            BinOp::Sub => write_asm!(ctx, "subl {rh}, {lh}"),
+            BinOp::Mul => write_asm!(ctx, "imul {rh}, {lh}"),
+            BinOp::Div => {
+                // x86 division (`idiv`) requires the dividend to be in EDX:EAX, and
+                // the divisor register is passed separately. This is fine as we
+                // don't use EAX or EDX as allocatable registers.
+                write_asm!(ctx, "movl {lh}, %eax");
+                write_asm!(ctx, "cdq");
+                write_asm!(ctx, "idiv {rh}");
+                write_asm!(ctx, "movl %eax, {lh}");
+            }
 
             op @ (BinOp::Equals
             | BinOp::NotEquals
             | BinOp::LessThan
             | BinOp::LessThanOrEquals
             | BinOp::GreaterThan
-            | BinOp::GreaterThanOrEquals) => writeln!(
-                self.buf,
-                "cmpl {rhs_str}, {lhs_str}\n{0}\
-                    movl $0, {lhs_str}\n{0}\
-                    set{1} %{2}",
-                self.indent(),
-                Self::get_relational_instruction(op),
-                Register::from_u8(lhs.reg()).get_low_8()
-            ),
+            | BinOp::GreaterThanOrEquals) => {
+                write_asm!(ctx, "cmpl {rh}, {lh}");
+                write_asm!(ctx, "movl $0, {lh}");
+                write_asm!(
+                    ctx,
+                    "set{} %{}",
+                    Self::get_relational_instruction(op),
+                    Register::from_u8(lhs.reg()).get_low_8()
+                )
+            }
 
-            BinOp::LogicalOr => panic!("`Instruction::BinOp(LogicalOr)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
-            BinOp::LogicalAnd => panic!("`Instruction::BinOp(LogicalAnd)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
+            BinOp::LogicalOr => todo!(),
+            BinOp::LogicalAnd => todo!(),
         }
     }
 
