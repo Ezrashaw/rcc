@@ -95,11 +95,10 @@ impl ArmBackend {
                 self.indent(),
                 if *should_jump { "bne" } else { "beq" }
             )?,
-            Instruction::BinaryBooleanOp(wloc, jump_loc) => writeln!(
+            Instruction::NormalizeBoolean(wloc) => writeln!(
                 self.buf,
                 "cmp {}, #0\n{}\
-                cset {}, ne\n\
-            _{jump_loc}:",
+                cset {}, ne",
                 Self::wloc_to_asm(wloc),
                 self.indent(),
                 Register::from_u8(wloc.reg())
@@ -117,7 +116,7 @@ impl ArmBackend {
                 Self::wloc_to_asm(wloc),
                 32 - (var + 1) * 4
             )?,
-            
+
             // FIXME: gah, this messes up the formatting
             Instruction::JumpDummy(post_else) => writeln!(self.buf, "_{post_else}:")?,
             Instruction::UnconditionalJump(loc) => writeln!(self.buf, "b _{loc}")?,

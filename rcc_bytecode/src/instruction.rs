@@ -38,10 +38,7 @@ pub enum Instruction {
 
     /// Normalize the second clause of a logical boolean binary operation
     /// (i.e. make all non-zero = 1)
-    ///
-    /// Also provides position for [`Instruction::CompareJump`] to jump to.
-    // FIXME: I don't like the operation-specific bytecode instructions.
-    BinaryBooleanOp(WriteLocation, u32),
+    NormalizeBoolean(WriteLocation),
 
     /// Modifies/declares a local variable.
     ///

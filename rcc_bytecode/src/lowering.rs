@@ -219,7 +219,8 @@ impl Bytecode<'_> {
                     // FIXME: hack: this assumes that we'll get the same register as before (certainly this isn't right).
                     let rhs = self.append_from_expression(rhs);
                     let rhs = self.upgrade_readable(rhs);
-                    self.append_instruction(Instruction::BinaryBooleanOp(rhs.clone(), label));
+                    self.append_instruction(Instruction::NormalizeBoolean(rhs.clone()));
+                    self.append_instruction(Instruction::JumpDummy(label));
 
                     return rhs.downgrade();
                 }

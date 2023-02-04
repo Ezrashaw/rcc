@@ -51,10 +51,9 @@ impl Backend for X86Backend {
                 );
             }
 
-            Instruction::BinaryBooleanOp(wl, jump_loc) => {
+            Instruction::NormalizeBoolean(wl) => {
                 write_asm!(ctx, "cmpl $0, {}  # check if e2 is true", Self::wl(wl));
                 write_asm!(ctx, "setne %{}", Register::from_u8(wl.reg()).get_low_8());
-                write_asm_no_indent!(ctx, "_{jump_loc}: # short-circuit jump label");
             }
 
             Instruction::AssignVariable(var, rl) => {
