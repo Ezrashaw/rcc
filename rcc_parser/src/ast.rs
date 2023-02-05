@@ -25,26 +25,30 @@ pub enum BlockItem<'a> {
     ///
     /// Indexes into [`Function`]s vector of local identifiers.
     /// Contains an optional initializer.
-    Declaration(u32, Option<Expression>),
+    Declaration(u32, Option<Expression<'a>>),
 
     Statement(Statement<'a>),
 }
 
 #[derive(Debug)]
 pub enum Statement<'a> {
-    Return(Expression),
+    Return(Expression<'a>),
 
     /// Standalone expression.
     ///
     /// Created from code like `2 + 2;`, primarily for variable assignments.
     /// "Null" expressions are also allowed, as in ";;;;;;;;".
-    Expression(Option<Expression>),
+    Expression(Option<Expression<'a>>),
 
     /// A common `if` statement.
     ///
     /// Contains a controlling expression, a `true` branch and an optional
     /// `false` branch.
-    Conditional(Expression, Box<Statement<'a>>, Option<Box<Statement<'a>>>),
+    Conditional(
+        Expression<'a>,
+        Box<Statement<'a>>,
+        Option<Box<Statement<'a>>>,
+    ),
 
     /// A compound statement, otherwise known as a "block".
     Compound(Block<'a>),
@@ -53,7 +57,7 @@ pub enum Statement<'a> {
     ///
     /// Contains the expression to evaluate per-iteration and the body
     /// to execute.
-    While(Expression, Box<Statement<'a>>),
+    While(Expression<'a>, Box<Statement<'a>>),
 
     /// A "do" loop.
     ///
@@ -62,7 +66,7 @@ pub enum Statement<'a> {
     ///
     /// Contains the expression to evaluate per-iteration and the body
     /// to execute.
-    Do(Expression, Box<Statement<'a>>),
+    Do(Expression<'a>, Box<Statement<'a>>),
 
     /// A `for` loop that does not define a loop variable.
     ///
@@ -72,9 +76,9 @@ pub enum Statement<'a> {
     /// - Post-expression
     /// - Body
     For(
-        Option<Expression>,
-        Option<Expression>,
-        Option<Expression>,
+        Option<Expression<'a>>,
+        Option<Expression<'a>>,
+        Option<Expression<'a>>,
         Box<Statement<'a>>,
     ),
 
@@ -89,9 +93,9 @@ pub enum Statement<'a> {
     // FIXME: I don't think tuple variants should span multiple lines. See `Statement::For` as well.
     ForDecl(
         u32,
-        Option<Expression>,
-        Option<Expression>,
-        Option<Expression>,
+        Option<Expression<'a>>,
+        Option<Expression<'a>>,
+        Option<Expression<'a>>,
         Box<Statement<'a>>,
     ),
 
@@ -111,15 +115,15 @@ pub enum Statement<'a> {
 }
 
 #[derive(Debug)]
-pub enum Expression {
+pub enum Expression<'a> {
     BinOp {
         has_parens: bool,
-        lhs: Box<Expression>,
-        rhs: Box<Expression>,
+        lhs: Box<Expression<'a>>,
+        rhs: Box<Expression<'a>>,
         op: BinOp,
     },
     UnaryOp {
-        expr: Box<Expression>,
+        expr: Box<Expression<'a>>,
         op: UnaryOp,
     },
     Literal {
@@ -128,14 +132,18 @@ pub enum Expression {
     },
     Assignment {
         identifier: u32,
-        expression: Box<Expression>,
+        expression: Box<Expression<'a>>,
     },
     Variable {
         identifier: u32,
     },
     TernaryConditional {
-        controlling: Box<Expression>,
-        if_true: Box<Expression>,
-        if_false: Box<Expression>,
+        controlling: Box<Expression<'a>>,
+        if_true: Box<Expression<'a>>,
+        if_false: Box<Expression<'a>>,
+    },
+    FunctionCall {
+        identifier: &'a str,
+        args: Vec<Expression<'a>>,
     },
 }

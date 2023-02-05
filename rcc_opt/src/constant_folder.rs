@@ -56,6 +56,7 @@ impl ConstantFolder {
                 }
             }
             Expression::Assignment { .. } | Expression::Variable { .. } => None,
+            Expression::FunctionCall { .. } => todo!(),
         }
     }
 }

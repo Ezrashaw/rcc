@@ -315,6 +315,7 @@ impl Bytecode<'_> {
 
                 false_reg
             }
+            Expression::FunctionCall { .. } => todo!(),
         }
     }
 

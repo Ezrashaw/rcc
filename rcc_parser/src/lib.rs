@@ -84,7 +84,9 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
             None
         } else {
-            let mut block = self.parse_block();
+            self.scopes.push(args.clone());
+
+            let mut block = self.parse_block(false);
 
             // Ensure that we have a return statement somewhere, if not, add one.
             if !block
@@ -135,10 +137,12 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         args
     }
 
-    fn parse_block(&mut self) -> Block<'a> {
+    fn parse_block(&mut self, new_scope: bool) -> Block<'a> {
         self.expect_token(TokenKind::OpenBrace);
 
-        self.scopes.push(Vec::new());
+        if new_scope {
+            self.scopes.push(Vec::new());
+        }
 
         let mut block_items = Vec::new();
         while self
@@ -172,7 +176,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         }
     }
 
-    fn parse_declaration(&mut self) -> (u32, Option<Expression>) {
+    fn parse_declaration(&mut self) -> (u32, Option<Expression<'a>>) {
         self.input.next();
 
         let ident_tok = self.input.next();
@@ -244,7 +248,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 return Statement::Conditional(expr, if_true, None);
             }
 
-            Some(TokenKind::OpenBrace) => return Statement::Compound(self.parse_block()),
+            Some(TokenKind::OpenBrace) => return Statement::Compound(self.parse_block(true)),
 
             Some(TokenKind::Keyword(Keyword::While)) => {
                 self.input.next();
@@ -338,7 +342,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         stmt
     }
 
-    fn parse_optional_expression(&mut self) -> Option<Expression> {
+    fn parse_optional_expression(&mut self) -> Option<Expression<'a>> {
         if self.input.peek().map_or(true, |tok| {
             matches!(tok.kind, TokenKind::Semicolon | TokenKind::CloseParen)
         }) {
@@ -348,7 +352,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         }
     }
 
-    fn parse_expression(&mut self) -> Expression {
+    fn parse_expression(&mut self) -> Expression<'a> {
         if let Some(TokenKind::Equals) = self.input.peek_nth(1).map(|t| t.kind.clone()) {
             let ident_tok = self.input.next();
             let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident_tok else {
@@ -370,7 +374,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         }
     }
 
-    fn parse_ternary(&mut self) -> Expression {
+    fn parse_ternary(&mut self) -> Expression<'a> {
         let expr = self.parse_binop();
 
         if let Some(Token {
@@ -394,7 +398,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         }
     }
 
-    fn parse_operand(&mut self) -> Expression {
+    fn parse_operand(&mut self) -> Expression<'a> {
         let tok = self.input.next();
 
         match tok.as_ref().map(|t| &t.kind) {
@@ -413,8 +417,28 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                 expr
             },
 
-            Some(TokenKind::Ident(var)) => {
-                Expression::Variable { identifier: self.get_variable(var, tok.unwrap().span) }
+            Some(TokenKind::Ident(ident)) => {
+                if let Some(TokenKind::OpenParen) = self.input.peek().as_ref().map(|t| &t.kind) {
+                    self.input.next();
+
+                    let mut args = Vec::new();
+
+                    while !matches!(self.input.peek().map(|t| &t.kind), Some(TokenKind::CloseParen)) {
+                        args.push(self.parse_expression());
+
+                        if !matches!(self.input.peek().map(|t| &t.kind), Some(TokenKind::Comma)) {
+                            break;
+                        }
+
+                        self.expect_token(TokenKind::Comma);
+                    }
+
+                    self.expect_token(TokenKind::CloseParen);
+
+                    Expression::FunctionCall { identifier: ident, args }
+                } else {
+                    Expression::Variable { identifier: self.get_variable(ident, tok.unwrap().span) }
+                }
             }
 
             _ => Self::emit_err_from_token("<expresion>", tok),
@@ -461,11 +485,11 @@ macro_rules! impl_binop {
                 }
             }
 
-            fn parse_binop(&mut self) -> Box<crate::ast::Expression> {
+            fn parse_binop(&mut self) -> Box<crate::ast::Expression<'a>> {
                 self.parse_binop_impl(6)
             }
 
-            fn parse_binop_impl(&mut self, lvl: u8) -> Box<crate::ast::Expression> {
+            fn parse_binop_impl(&mut self, lvl: u8) -> Box<crate::ast::Expression<'a>> {
                 if lvl == 0 {
                     return Box::new(self.parse_operand());
                 }
