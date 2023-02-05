@@ -70,6 +70,10 @@ impl Backend for X86Backend {
             Instruction::UnaryOp(op, wl) => Self::write_unary_op(ctx, *op, wl),
         }
     }
+
+    fn write_function_end(&mut self, ctx: &mut BackendContext, _: &str) {
+        ctx.decrement_indent();
+    }
 }
 
 impl X86Backend {

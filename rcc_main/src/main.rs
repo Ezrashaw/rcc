@@ -125,14 +125,19 @@ fn compile_program_verbose(input: &str) -> String {
         println!("======================");
     }
 
-    let bytecode = Bytecode::from_function(&ast.function);
-    println!("===== BYTECODE (for `{}`) ====", bytecode.fn_name());
-    for instruction in bytecode.instructions() {
-        println!("{instruction:?}");
+    let bytecode = Bytecode::from_ast(&ast);
+    println!("===== BYTECODE ====");
+    for function in &bytecode {
+        println!("== BYTECODE FOR `{}` ==", function.fn_name());
+        for instruction in function.instructions() {
+            println!("{instruction:?}");
+        }
+        println!("======");
     }
+
     println!("===================");
 
-    gen_asm(&bytecode, true)
+    gen_asm(bytecode, true)
 }
 
 fn compile_program(input: &str) -> String {
@@ -145,12 +150,12 @@ fn compile_program(input: &str) -> String {
         rcc_opt::optimize_ast(&mut ast);
     }
 
-    let bytecode = Bytecode::from_function(&ast.function);
+    let bytecode = Bytecode::from_ast(&ast);
 
-    gen_asm(&bytecode, false)
+    gen_asm(bytecode, false)
 }
 
-fn gen_asm(bytecode: &Bytecode, verbose: bool) -> String {
+fn gen_asm(bytecodes: Vec<Bytecode>, verbose: bool) -> String {
     if verbose {
         print!("====== ");
     }
@@ -159,7 +164,7 @@ fn gen_asm(bytecode: &Bytecode, verbose: bool) -> String {
         if verbose {
             print!("LLVM IR");
         }
-        LlvmBackend::gen_llvm(&bytecode)
+        LlvmBackend::gen_llvm(&bytecodes.first().unwrap())
     } else {
         let arch = std::env::consts::ARCH;
         match arch {
@@ -168,14 +173,15 @@ fn gen_asm(bytecode: &Bytecode, verbose: bool) -> String {
                     print!("ARM ASSEMBLY");
                 }
 
-                ArmBackend::gen_arm(&bytecode)
+                // FIXME: we can only support a single function
+                ArmBackend::gen_arm(&bytecodes.first().unwrap())
             }
             "x86_64" => {
                 if verbose {
                     print!("x86 ASSEMBLY");
                 }
 
-                rcc_backend_traits::generate_assembly(&bytecode, &mut X86Backend)
+                rcc_backend_traits::generate_assembly(&bytecodes, &mut X86Backend)
             }
             _ => panic!("unsupported architecture"),
         }

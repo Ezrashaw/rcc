@@ -2,12 +2,13 @@ use rcc_structures::{BinOp, UnaryOp};
 
 #[derive(Debug)]
 pub struct Program<'a> {
-    pub function: Function<'a>,
+    pub functions: Vec<Function<'a>>,
 }
 #[derive(Debug)]
 pub struct Function<'a> {
     pub name: &'a str,
-    pub block: Block<'a>,
+    pub args: Vec<&'a str>,
+    pub body: Option<Block<'a>>,
 }
 
 #[derive(Debug)]

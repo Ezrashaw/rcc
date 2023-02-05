@@ -5,6 +5,7 @@ use rcc_bytecode::{Bytecode, Instruction};
 pub trait Backend {
     fn write_function(&mut self, ctx: &mut BackendContext, fn_name: &str);
     fn write_instruction(&mut self, ctx: &mut BackendContext, instruction: &Instruction);
+    fn write_function_end(&mut self, ctx: &mut BackendContext, fn_name: &str);
 }
 
 pub struct BackendContext {
@@ -53,21 +54,35 @@ macro_rules! write_asm_no_indent {
     };
 }
 
-pub fn generate_assembly(bytecode: &Bytecode, backend: &mut impl Backend) -> String {
+pub fn generate_assembly(bytecode: &[Bytecode], backend: &mut impl Backend) -> String {
     let mut ctx = BackendContext {
         buf: String::new(),
         indent_lvl: 0,
     };
 
-    backend.write_function(&mut ctx, bytecode.fn_name());
+    for function in bytecode {
+        generate_from_function(&mut ctx, function, backend);
+    }
+
+    ctx.buf
+}
+
+fn generate_from_function(
+    ctx: &mut BackendContext,
+    bytecode: &Bytecode,
+    backend: &mut impl Backend,
+) {
+    backend.write_function(ctx, bytecode.fn_name());
     writeln!(ctx.buf).unwrap();
 
     for instr in bytecode.instructions() {
         write_asm!(ctx, "# {instr:?}");
 
-        backend.write_instruction(&mut ctx, instr);
+        backend.write_instruction(ctx, instr);
         writeln!(ctx.buf).unwrap();
     }
 
-    ctx.buf
+    backend.write_function_end(ctx, bytecode.fn_name());
+
+    writeln!(ctx.buf).unwrap();
 }

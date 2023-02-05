@@ -56,12 +56,13 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
     }
 
     pub fn parse(mut self) -> Program<'a> {
-        let function = self.parse_function();
-        if self.input.next().is_some() {
-            SpannedError::without_span("Unexpected tokens when EOF expected").emit();
+        let mut functions = Vec::new();
+
+        while self.input.peek().is_some() {
+            functions.push(self.parse_function());
         }
 
-        Program { function }
+        Program { functions }
     }
 
     fn parse_function(&mut self) -> Function<'a> {
@@ -72,25 +73,66 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
             Self::emit_err_from_token("<identifier>", tok)
         };
 
-        self.expect_token(TokenKind::OpenParen);
-        self.expect_token(TokenKind::CloseParen);
+        let args = self.parse_fn_args();
 
-        let mut block = self.parse_block();
+        // FIXME: this is a bit gross
+        let body = if matches!(
+            self.input.peek().map(|t| &t.kind),
+            Some(TokenKind::Semicolon)
+        ) {
+            self.input.next();
 
-        // Ensure that we have a return statement somewhere, if not, add one.
-        if !block
-            .block_items
-            .iter()
-            .any(|stmt| matches!(stmt, BlockItem::Statement(Statement::Return(_))))
-        {
-            block
+            None
+        } else {
+            let mut block = self.parse_block();
+
+            // Ensure that we have a return statement somewhere, if not, add one.
+            if !block
                 .block_items
-                .push(BlockItem::Statement(Statement::Return(
-                    Expression::Literal { val: 0 },
-                )));
+                .iter()
+                .any(|stmt| matches!(stmt, BlockItem::Statement(Statement::Return(_))))
+            {
+                block
+                    .block_items
+                    .push(BlockItem::Statement(Statement::Return(
+                        Expression::Literal { val: 0 },
+                    )));
+            }
+
+            Some(block)
+        };
+
+        Function { name, args, body }
+    }
+
+    fn parse_fn_args(&mut self) -> Vec<&'a str> {
+        let mut args = Vec::new();
+
+        self.expect_token(TokenKind::OpenParen);
+
+        while matches!(
+            self.input.peek().map(|tk| &tk.kind),
+            Some(TokenKind::Keyword(Keyword::Int))
+        ) {
+            self.expect_token(TokenKind::Keyword(Keyword::Int));
+
+            let tok = self.input.next();
+            let Some(TokenKind::Ident(name)) = tok.as_ref().map(|t| &t.kind) else {
+                Self::emit_err_from_token("<identifier>", tok)
+            };
+
+            args.push(*name);
+
+            if !matches!(self.input.peek().map(|tk| &tk.kind), Some(TokenKind::Comma)) {
+                break;
+            }
+
+            self.expect_token(TokenKind::Comma);
         }
 
-        Function { name, block }
+        self.expect_token(TokenKind::CloseParen);
+
+        args
     }
 
     fn parse_block(&mut self) -> Block<'a> {

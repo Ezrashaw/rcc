@@ -17,69 +17,75 @@ pub(crate) trait OptimizationPass {
 }
 
 pub fn optimize_ast(ast: &mut Program) {
-    optimize_ast_with_pass(ast, &mut ConstantFolder);
+    // optimize_ast_with_pass(ast, &mut ConstantFolder);
 
-    // remove useless statements
-    ast.function.block.block_items.retain(|stmt| {
-        !matches!(
-            stmt,
-            BlockItem::Statement(Statement::Expression(
-                Some(Expression::Literal { .. }) | None
-            ))
-        )
-    });
+    // // remove useless statements
+    // ast.function.block.block_items.retain(|stmt| {
+    //     !matches!(
+    //         stmt,
+    //         BlockItem::Statement(Statement::Expression(
+    //             Some(Expression::Literal { .. }) | None
+    //         ))
+    //     )
+    // });
 
-    let mut inliner = VariableInliner::new();
-    optimize_ast_with_pass(ast, &mut inliner);
+    // let mut inliner = VariableInliner::new();
+    // optimize_ast_with_pass(ast, &mut inliner);
 
-    dbg!(&ast);
+    // dbg!(&ast);
 
-    // remove useless statements
-    ast.function.block.block_items.retain(|stmt| {
-        !matches!(
-            stmt,
-            BlockItem::Statement(Statement::Expression(
-                Some(Expression::Literal { .. }) | None
-            ))
-        )
-    });
+    // // remove useless statements
+    // ast.functions.bod.block_items.retain(|stmt| {
+    //     !matches!(
+    //         stmt,
+    //         BlockItem::Statement(Statement::Expression(
+    //             Some(Expression::Literal { .. }) | None
+    //         ))
+    //     )
+    // });
 
-    optimize_ast_with_pass(ast, &mut inliner);
+    // optimize_ast_with_pass(ast, &mut inliner);
 
-    // remove useless statements
-    ast.function.block.block_items.retain(|stmt| {
-        !matches!(
-            stmt,
-            BlockItem::Statement(Statement::Expression(
-                Some(Expression::Literal { .. }) | None
-            ))
-        )
-    });
+    // // remove useless statements
+    // ast.function.block.block_items.retain(|stmt| {
+    //     !matches!(
+    //         stmt,
+    //         BlockItem::Statement(Statement::Expression(
+    //             Some(Expression::Literal { .. }) | None
+    //         ))
+    //     )
+    // });
 
-    optimize_ast_with_pass(ast, &mut ConstantFolder);
+    // optimize_ast_with_pass(ast, &mut ConstantFolder);
 
-    // remove useless statements
-    ast.function.block.block_items.retain(|stmt| {
-        !matches!(
-            stmt,
-            BlockItem::Statement(Statement::Expression(
-                Some(Expression::Literal { .. }) | None
-            ))
-        )
-    });
+    // // remove useless statements
+    // ast.function.block.block_items.retain(|stmt| {
+    //     !matches!(
+    //         stmt,
+    //         BlockItem::Statement(Statement::Expression(
+    //             Some(Expression::Literal { .. }) | None
+    //         ))
+    //     )
+    // });
 }
 
 fn optimize_ast_with_pass(ast: &mut Program, pass: &mut impl OptimizationPass) {
-    let function = &mut ast.function;
+    for function in &mut ast.functions {
+        optimize_function_with_pass(function, pass);
+    }
+}
+
+fn optimize_function_with_pass(function: &mut Function, pass: &mut impl OptimizationPass) {
     pass.opt_function(function);
 
-    let block = &mut function.block;
-    pass.opt_block(block);
-
-    optimize_block_with_pass(block, pass);
+    if let Some(block) = &mut function.body {
+        optimize_block_with_pass(block, pass);
+    }
 }
 
 fn optimize_block_with_pass(block: &mut Block, pass: &mut impl OptimizationPass) {
+    pass.opt_block(block);
+
     for block_item in &mut block.block_items {
         optimize_block_item_with_pass(block_item, pass);
     }

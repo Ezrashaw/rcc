@@ -1,6 +1,6 @@
 #![feature(let_chains)]
 
-use rcc_parser::ast::Function;
+use rcc_parser::ast::{Block, Program};
 
 mod instruction;
 mod lowering;
@@ -14,7 +14,8 @@ pub use instruction::{Instruction, ReadLocation, WriteLocation};
 /// lowered AST for that function.
 ///
 /// Use the [`Bytecode::from_function`] method to generate bytecode for a
-/// function.
+/// function. Or the [`Bytecode::from_ast`] method to generate bytecode for all
+/// functions.
 #[derive(Debug)]
 pub struct Bytecode<'a> {
     // "public" fields
@@ -30,9 +31,21 @@ pub struct Bytecode<'a> {
 }
 
 impl<'a> Bytecode<'a> {
-    pub fn from_function(function: &Function<'a>) -> Self {
+    pub fn from_ast(ast: &Program<'a>) -> Vec<Self> {
+        let mut functions = Vec::new();
+
+        for function in &ast.functions {
+            if let Some(body) = &function.body {
+                functions.push(Self::from_function(function.name, body));
+            }
+        }
+
+        functions
+    }
+
+    pub fn from_function(name: &'a str, body: &Block) -> Self {
         let mut bytecode = Self {
-            fn_name: function.name,
+            fn_name: name,
             instr: Vec::new(),
             label_counter: 0,
             allocated_registers: Vec::new(),
@@ -40,7 +53,7 @@ impl<'a> Bytecode<'a> {
             loop_end: Vec::new(),
         };
 
-        bytecode.append_from_block(&function.block);
+        bytecode.append_from_block(body);
 
         bytecode
     }
