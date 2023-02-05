@@ -18,8 +18,6 @@ impl Backend for X86Backend {
             write_asm!(ctx, ".globl {fn_name}\n{fn_name}:");
         }
 
-        ctx.increment_indent();
-
         // write function prologue, sets up a stack frame
         write_asm!(ctx, "pushq %rbp         # save old value of RBP");
         write_asm!(
@@ -31,7 +29,7 @@ impl Backend for X86Backend {
     fn write_instruction(&mut self, ctx: &mut BackendContext, instruction: &Instruction) {
         match instruction {
             Instruction::Move(from, to) => {
-                write_asm!(ctx, "movl {}, {}", Self::rl(from), Self::wl(to))
+                write_asm!(ctx, "movl {}, {}", Self::rl(from), Self::wl(to));
             }
 
             Instruction::Return(val) => {
@@ -57,10 +55,10 @@ impl Backend for X86Backend {
             }
 
             Instruction::AssignVariable(var, rl) => {
-                write_asm!(ctx, "movl {}, {}", Self::rl(rl), Self::var(var));
+                write_asm!(ctx, "movl {}, {}", Self::rl(rl), Self::var(*var));
             }
             Instruction::LoadVariable(var, wl) => {
-                write_asm!(ctx, "movl {}, {}", Self::var(var), Self::wl(wl));
+                write_asm!(ctx, "movl {}, {}", Self::var(*var), Self::wl(wl));
             }
 
             Instruction::JumpDummy(loc) => write_asm_no_indent!(ctx, "_{loc}:"),
@@ -69,10 +67,6 @@ impl Backend for X86Backend {
             Instruction::BinaryOp(op, lhs, rhs) => Self::write_binary_op(ctx, *op, lhs, rhs),
             Instruction::UnaryOp(op, wl) => Self::write_unary_op(ctx, *op, wl),
         }
-    }
-
-    fn write_function_end(&mut self, ctx: &mut BackendContext, _: &str) {
-        ctx.decrement_indent();
     }
 }
 
@@ -88,7 +82,7 @@ impl X86Backend {
         }
     }
 
-    fn var(id: &u32) -> String {
+    fn var(id: u32) -> String {
         format!("-{}(%rbp)", (id + 1) * 4)
     }
 
@@ -147,7 +141,7 @@ impl X86Backend {
                     "set{} %{}",
                     Self::get_relational_instruction(op),
                     Register::from_u8(lhs.reg()).get_low_8()
-                )
+                );
             }
 
             BinOp::LogicalOr => todo!(),

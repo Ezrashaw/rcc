@@ -1,10 +1,10 @@
 mod register;
 
 use rcc_backend_traits::{write_asm, write_asm_no_indent, Backend, BackendContext};
-use rcc_bytecode::{Bytecode, Instruction, ReadLocation, WriteLocation};
+use rcc_bytecode::{Instruction, ReadLocation, WriteLocation};
 use rcc_structures::{BinOp, UnaryOp};
 use register::Register;
-use std::fmt::{self, Write};
+use std::fmt::Write;
 
 pub struct ArmBackend;
 
@@ -15,8 +15,6 @@ impl Backend for ArmBackend {
         } else {
             write_asm!(ctx, ".globl {fn_name}\n{fn_name}:");
         }
-
-        ctx.increment_indent();
 
         // write function prologue, sets up a stack frame
         // HACK: you don't need more than 8 variables right?
@@ -50,10 +48,10 @@ impl Backend for ArmBackend {
             }
 
             Instruction::AssignVariable(var, rloc) => {
-                write_asm!(ctx, "str {}, {}", Self::rl(rloc), Self::var(var))
+                write_asm!(ctx, "str {}, {}", Self::rl(rloc), Self::var(*var));
             }
             Instruction::LoadVariable(var, wloc) => {
-                write_asm!(ctx, "ldr {}, {}", Self::wl(wloc), Self::var(var))
+                write_asm!(ctx, "ldr {}, {}", Self::wl(wloc), Self::var(*var));
             }
 
             Instruction::JumpDummy(loc) => write_asm_no_indent!(ctx, "_{loc}:"),
@@ -62,10 +60,6 @@ impl Backend for ArmBackend {
             Instruction::BinaryOp(op, lhs, rhs) => self.write_binary_op(ctx, *op, lhs, rhs),
             Instruction::UnaryOp(op, wloc) => self.write_unary_op(ctx, *op, wloc),
         }
-    }
-
-    fn write_function_end(&mut self, ctx: &mut BackendContext, _: &str) {
-        ctx.decrement_indent()
     }
 }
 
@@ -81,7 +75,7 @@ impl ArmBackend {
         }
     }
 
-    fn var(id: &u32) -> String {
+    fn var(id: u32) -> String {
         format!("[sp, {}]", 32 - (id + 1) * 4)
     }
 

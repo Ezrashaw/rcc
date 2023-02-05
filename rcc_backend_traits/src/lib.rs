@@ -5,7 +5,6 @@ use rcc_bytecode::{Bytecode, Instruction};
 pub trait Backend {
     fn write_function(&mut self, ctx: &mut BackendContext, fn_name: &str);
     fn write_instruction(&mut self, ctx: &mut BackendContext, instruction: &Instruction);
-    fn write_function_end(&mut self, ctx: &mut BackendContext, fn_name: &str);
 }
 
 pub struct BackendContext {
@@ -75,6 +74,8 @@ fn generate_from_function(
     backend.write_function(ctx, bytecode.fn_name());
     writeln!(ctx.buf).unwrap();
 
+    ctx.increment_indent();
+
     for instr in bytecode.instructions() {
         write_asm!(ctx, "# {instr:?}");
 
@@ -82,7 +83,7 @@ fn generate_from_function(
         writeln!(ctx.buf).unwrap();
     }
 
-    backend.write_function_end(ctx, bytecode.fn_name());
+    ctx.decrement_indent();
 
     writeln!(ctx.buf).unwrap();
 }
