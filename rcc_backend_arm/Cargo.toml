@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 rcc_bytecode = { version = "0.0.0", path = "../rcc_bytecode" }
 rcc_structures = { version = "0.0.0", path = "../rcc_structures" }
+rcc_backend_traits = { version = "0.0.0", path = "../rcc_backend_traits" }

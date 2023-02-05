@@ -173,8 +173,7 @@ fn gen_asm(bytecodes: Vec<Bytecode>, verbose: bool) -> String {
                     print!("ARM ASSEMBLY");
                 }
 
-                // FIXME: we can only support a single function
-                ArmBackend::gen_arm(&bytecodes.first().unwrap())
+                rcc_backend_traits::generate_assembly(&bytecodes, &mut ArmBackend)
             }
             "x86_64" => {
                 if verbose {

@@ -1,153 +1,116 @@
 mod register;
 
+use rcc_backend_traits::{write_asm, write_asm_no_indent, Backend, BackendContext};
 use rcc_bytecode::{Bytecode, Instruction, ReadLocation, WriteLocation};
 use rcc_structures::{BinOp, UnaryOp};
 use register::Register;
 use std::fmt::{self, Write};
 
-pub struct ArmBackend {
-    buf: String,
-    indent_lvl: u32,
-}
+pub struct ArmBackend;
 
-impl ArmBackend {
-    pub fn gen_arm(bytecode: &Bytecode<'_>) -> String {
-        let mut backend = Self {
-            buf: String::new(),
-            indent_lvl: 0,
-        };
+impl Backend for ArmBackend {
+    fn write_function(&mut self, ctx: &mut BackendContext, fn_name: &str) {
+        if std::env::consts::OS == "macos" {
+            write_asm!(ctx, ".globl _{fn_name}\n_{fn_name}:");
+        } else {
+            write_asm!(ctx, ".globl {fn_name}\n{fn_name}:");
+        }
 
-        backend
-            .write_function(bytecode.fn_name(), bytecode.instructions())
-            .unwrap();
+        ctx.increment_indent();
 
-        backend.buf
+        // write function prologue, sets up a stack frame
+        // HACK: you don't need more than 8 variables right?
+        write_asm!(ctx, "sub sp, sp, #32");
     }
 
-    fn indent(&self) -> &'static str {
-        match self.indent_lvl {
-            1 => "    ",
-            _ => panic!("too much indent"),
+    fn write_instruction(&mut self, ctx: &mut BackendContext, instruction: &Instruction) {
+        match instruction {
+            Instruction::Move(from, to) => {
+                write_asm!(ctx, "mov {}, {}", Self::wl(to), Self::rl(from));
+            }
+
+            Instruction::Return(loc) => {
+                write_asm!(ctx, "mov w0, {}", Self::rl(loc));
+                write_asm!(ctx, "add sp, sp, #32");
+                write_asm!(ctx, "ret");
+            }
+
+            Instruction::CompareJump(rloc, should_jump, jump_loc) => {
+                write_asm!(ctx, "cmp {}, #0", Self::wl(rloc));
+                write_asm!(
+                    ctx,
+                    "{} _{jump_loc}",
+                    if *should_jump { "bne" } else { "beq" }
+                );
+            }
+
+            Instruction::NormalizeBoolean(wloc) => {
+                write_asm!(ctx, "cmp {}, #0", Self::wl(wloc));
+                write_asm!(ctx, "cset {}, ne", Self::wl(wloc));
+            }
+
+            Instruction::AssignVariable(var, rloc) => {
+                write_asm!(ctx, "str {}, {}", Self::rl(rloc), Self::var(var))
+            }
+            Instruction::LoadVariable(var, wloc) => {
+                write_asm!(ctx, "ldr {}, {}", Self::wl(wloc), Self::var(var))
+            }
+
+            Instruction::JumpDummy(loc) => write_asm_no_indent!(ctx, "_{loc}:"),
+            Instruction::UnconditionalJump(loc) => write_asm!(ctx, "b _{loc}"),
+
+            Instruction::BinaryOp(op, lhs, rhs) => self.write_binary_op(ctx, *op, lhs, rhs),
+            Instruction::UnaryOp(op, wloc) => self.write_unary_op(ctx, *op, wloc),
         }
     }
 
-    fn wloc_to_asm(loc: &WriteLocation) -> String {
+    fn write_function_end(&mut self, ctx: &mut BackendContext, _: &str) {
+        ctx.decrement_indent()
+    }
+}
+
+impl ArmBackend {
+    fn wl(loc: &WriteLocation) -> String {
         format!("{}", Register::from_u8(loc.reg()))
     }
 
-    fn rloc_to_asm(loc: &ReadLocation) -> String {
+    fn rl(loc: &ReadLocation) -> String {
         match loc {
-            ReadLocation::Writable(wloc) => Self::wloc_to_asm(wloc),
+            ReadLocation::Writable(wloc) => Self::wl(wloc),
             ReadLocation::Constant(val) => format!("#{val}"),
         }
     }
 
-    fn write_function(&mut self, name: &str, bytecode: &[Instruction]) -> fmt::Result {
-        if std::env::consts::OS == "macos" {
-            writeln!(self.buf, ".globl _{name}\n_{name}:")?;
-        } else {
-            writeln!(self.buf, ".globl {name}\n{name}:")?;
-        }
-
-        self.indent_lvl = 1;
-
-        // write function prologue, sets up a stack frame
-        // HACK: you don't need more than 8 variables right?
-        writeln!(self.buf, "{}sub sp, sp, #32\n", self.indent())?;
-
-        for instr in bytecode {
-            self.write_instruction(instr)?;
-        }
-
-        Ok(())
+    fn var(id: &u32) -> String {
+        format!("[sp, {}]", 32 - (id + 1) * 4)
     }
 
-    fn write_instruction(&mut self, instruction: &Instruction) -> fmt::Result {
-        write!(self.buf, "{0}# {instruction:?}\n{0}", self.indent())?;
-
-        match instruction {
-            Instruction::Move(from, to) => {
-                writeln!(
-                    self.buf,
-                    "mov {}, {}",
-                    Self::wloc_to_asm(to),
-                    Self::rloc_to_asm(from)
-                )?;
+    fn write_unary_op(&mut self, ctx: &mut BackendContext, op: UnaryOp, wloc: &WriteLocation) {
+        let wl = Self::wl(wloc);
+        match op {
+            UnaryOp::Negation => write_asm!(ctx, "neg {wl}, {wl}"),
+            UnaryOp::BitwiseComplement => write_asm!(ctx, "mvn {wl}, {wl}"),
+            UnaryOp::LogicalNegation => {
+                write_asm!(ctx, "cmp {wl}, #0");
+                write_asm!(ctx, "cset {wl}, eq");
             }
-
-            Instruction::Return(loc) => writeln!(
-                self.buf,
-                "mov w0, {}\n{}\
-                add sp, sp, #32\n{1}\
-                ret",
-                Self::rloc_to_asm(loc),
-                self.indent(),
-            )?,
-
-            Instruction::BinaryOp(op, lhs, rhs) => self.write_binop(*op, lhs, rhs)?,
-            Instruction::UnaryOp(op, loc) => self.write_unary_op(*op, loc)?,
-
-            Instruction::CompareJump(rloc, should_jump, jump_loc) => writeln!(
-                self.buf,
-                "cmp {}, #0\n{}\
-                {} _{jump_loc}",
-                Self::wloc_to_asm(rloc),
-                self.indent(),
-                if *should_jump { "bne" } else { "beq" }
-            )?,
-            Instruction::NormalizeBoolean(wloc) => writeln!(
-                self.buf,
-                "cmp {}, #0\n{}\
-                cset {}, ne",
-                Self::wloc_to_asm(wloc),
-                self.indent(),
-                Register::from_u8(wloc.reg())
-            )?,
-
-            Instruction::AssignVariable(var, rloc) => writeln!(
-                self.buf,
-                "str {}, [sp, {}]",
-                Self::rloc_to_asm(rloc),
-                32 - (var + 1) * 4
-            )?,
-            Instruction::LoadVariable(var, wloc) => writeln!(
-                self.buf,
-                "ldr {}, [sp, {}]",
-                Self::wloc_to_asm(wloc),
-                32 - (var + 1) * 4
-            )?,
-
-            // FIXME: gah, this messes up the formatting
-            Instruction::JumpDummy(post_else) => writeln!(self.buf, "_{post_else}:")?,
-            Instruction::UnconditionalJump(loc) => writeln!(self.buf, "b _{loc}")?,
-        }
-
-        writeln!(self.buf)
-    }
-
-    fn write_unary_op(&mut self, op: UnaryOp, wloc: &WriteLocation) -> fmt::Result {
-        let wloc_str = Self::wloc_to_asm(wloc);
-        match op {
-            UnaryOp::Negation => writeln!(self.buf, "neg {wloc_str}, {wloc_str}"),
-            UnaryOp::BitwiseComplement => writeln!(self.buf, "mvn {wloc_str}, {wloc_str}"),
-            UnaryOp::LogicalNegation => writeln!(
-                self.buf,
-                "cmp   {wloc_str}, #0\n{0}\
-                cset   {1}, eq",
-                self.indent(),
-                Register::from_u8(wloc.reg())
-            ),
         }
     }
 
-    fn write_binop(&mut self, op: BinOp, lhs: &WriteLocation, rhs: &ReadLocation) -> fmt::Result {
-        let lhs_str = Self::wloc_to_asm(lhs);
-        let rhs_str = Self::rloc_to_asm(rhs);
+    fn write_binary_op(
+        &mut self,
+        ctx: &mut BackendContext,
+        op: BinOp,
+        lhs: &WriteLocation,
+        rhs: &ReadLocation,
+    ) {
+        let lh = Self::wl(lhs);
+        let rh = Self::rl(rhs);
         match op {
-            BinOp::Add => writeln!(self.buf, "add  {lhs_str}, {lhs_str}, {rhs_str}"),
-            BinOp::Sub => writeln!(self.buf, "sub  {lhs_str}, {lhs_str}, {rhs_str}"),
-            BinOp::Mul => writeln!(self.buf, "mul  {lhs_str}, {lhs_str}, {rhs_str}"),
-            BinOp::Div => writeln!(self.buf, "sdiv {lhs_str}, {lhs_str}, {rhs_str}"),
+            BinOp::Add => write_asm!(ctx, "add  {lh}, {lh}, {rh}"),
+            BinOp::Sub => write_asm!(ctx, "sub  {lh}, {lh}, {rh}"),
+            BinOp::Mul => write_asm!(ctx, "mul  {lh}, {lh}, {rh}"),
+            BinOp::Div => write_asm!(ctx, "sdiv {lh}, {lh}, {rh}"),
             BinOp::Modulo => todo!(),
 
             op @ (BinOp::Equals
@@ -155,28 +118,21 @@ impl ArmBackend {
             | BinOp::LessThan
             | BinOp::LessThanOrEquals
             | BinOp::GreaterThan
-            | BinOp::GreaterThanOrEquals) => writeln!(
-                self.buf,
-                "cmp {lhs_str}, {rhs_str}\n{}\
-                cset {lhs_str}, {}",
-                self.indent(),
-                Self::get_relational_reg(op),
-            ),
+            | BinOp::GreaterThanOrEquals) => {
+                write_asm!(ctx, "cmp {lh}, {rh}");
+                write_asm!(ctx, "cset {lh}, {}", match op {
+                    BinOp::Equals => "eq",
+                    BinOp::NotEquals => "ne",
+                    BinOp::LessThan => "lt",
+                    BinOp::LessThanOrEquals => "le",
+                    BinOp::GreaterThan => "gt",
+                    BinOp::GreaterThanOrEquals => "ge",
+                    _ => panic!("provided binop was not relational operator!"),
+                });
+            },
 
             BinOp::LogicalOr => panic!("`Instruction::BinOp(LogicalOr)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
             BinOp::LogicalAnd => panic!("`Instruction::BinOp(LogicalAnd)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
-        }
-    }
-
-    fn get_relational_reg(op: BinOp) -> &'static str {
-        match op {
-            BinOp::Equals => "eq",
-            BinOp::NotEquals => "ne",
-            BinOp::LessThan => "lt",
-            BinOp::LessThanOrEquals => "le",
-            BinOp::GreaterThan => "gt",
-            BinOp::GreaterThanOrEquals => "ge",
-            _ => panic!("provided binop was not relational operator!"),
         }
     }
 }
