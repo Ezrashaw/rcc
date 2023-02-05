@@ -149,7 +149,7 @@ if test 1 -lt $#; then
    exit 0
 fi
 
-num_stages=10
+num_stages=11
 
 for i in `seq 1 $num_stages`; do
     test_stage $i
