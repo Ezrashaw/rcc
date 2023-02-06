@@ -24,4 +24,8 @@ pub enum BinOp {
 
     LeftShift,
     RightShift,
+
+    BitwiseOr,
+    ExclusiveOr,
+    BitwiseAnd,
 }

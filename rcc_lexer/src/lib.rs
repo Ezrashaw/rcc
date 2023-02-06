@@ -34,6 +34,9 @@ pub enum TokenKind<'a> {
     Percent,
     LeftArrow,
     RightArrow,
+    Pipe,
+    Caret,
+    And,
 
     DoubleAnd,
     DoublePipe,
@@ -85,6 +88,7 @@ const_tokens! {
     "/" => TokenKind::Slash,
     "?" => TokenKind::QuestionMark,
     "%" => TokenKind::Percent,
+    "^" => TokenKind::Caret,
 
     // double-char operators
     "&&" => TokenKind::DoubleAnd,
@@ -101,6 +105,8 @@ const_tokens! {
     "<" => TokenKind::LeftArrow,
     ">" => TokenKind::RightArrow,
     "=" => TokenKind::Equals,
+    "&" => TokenKind::And,
+    "|" => TokenKind::Pipe,
 }
 
 multi_char_tokens! {

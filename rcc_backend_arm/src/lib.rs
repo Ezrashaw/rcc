@@ -128,6 +128,10 @@ impl ArmBackend {
             BinOp::LeftShift => todo!(),
             BinOp::RightShift => todo!(),
 
+            BinOp::BitwiseOr => todo!(),
+            BinOp::ExclusiveOr => todo!(),
+            BinOp::BitwiseAnd => todo!(),
+
             BinOp::LogicalOr => panic!("`Instruction::BinOp(LogicalOr)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
             BinOp::LogicalAnd => panic!("`Instruction::BinOp(LogicalAnd)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
         }
