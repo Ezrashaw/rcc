@@ -32,15 +32,17 @@ pub enum TokenKind<'a> {
     Equals,
     QuestionMark,
     Percent,
+    LeftArrow,
+    RightArrow,
 
     DoubleAnd,
     DoublePipe,
     DoubleEquals,
     ExclaimEquals,
-    LessThan,
-    LessThanEquals,
-    GreaterThan,
-    GreaterThanEquals,
+    LeftArrowEquals,
+    RightArrowEquals,
+    DoubleLeftArrow,
+    DoubleRightArrow,
 
     // complex
     Literal(u32),
@@ -89,13 +91,15 @@ const_tokens! {
     "||" => TokenKind::DoublePipe,
     "==" => TokenKind::DoubleEquals,
     "!=" => TokenKind::ExclaimEquals,
-    "<=" => TokenKind::LessThanEquals,
-    ">=" => TokenKind::GreaterThanEquals,
+    "<=" => TokenKind::LeftArrowEquals,
+    ">=" => TokenKind::RightArrowEquals,
+    "<<" => TokenKind::DoubleLeftArrow,
+    ">>" => TokenKind::DoubleRightArrow,
 
     // placed here for lower prio
     "!" => TokenKind::Exclamation,
-    "<" => TokenKind::LessThan,
-    ">" => TokenKind::GreaterThan,
+    "<" => TokenKind::LeftArrow,
+    ">" => TokenKind::RightArrow,
     "=" => TokenKind::Equals,
 }
 

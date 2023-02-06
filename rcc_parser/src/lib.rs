@@ -486,7 +486,7 @@ macro_rules! impl_binop {
             }
 
             fn parse_binop(&mut self) -> Box<crate::ast::Expression<'a>> {
-                self.parse_binop_impl(6)
+                self.parse_binop_impl(7)
             }
 
             fn parse_binop_impl(&mut self, lvl: u8) -> Box<crate::ast::Expression<'a>> {
@@ -518,10 +518,11 @@ macro_rules! impl_binop {
 
 impl_binop! {
     {
-        6 = BinOp::LogicalOr,
-        5 = BinOp::LogicalAnd,
-        4 = BinOp::Equals | BinOp::NotEquals,
-        3 = BinOp::LessThan | BinOp::LessThanOrEquals | BinOp::GreaterThan | BinOp::GreaterThanOrEquals,
+        7 = BinOp::LogicalOr,
+        6 = BinOp::LogicalAnd,
+        5 = BinOp::Equals | BinOp::NotEquals,
+        4 = BinOp::LessThan | BinOp::LessThanOrEquals | BinOp::GreaterThan | BinOp::GreaterThanOrEquals,
+        3 = BinOp::LeftShift | BinOp::RightShift,
         2 = BinOp::Add | BinOp::Sub,
         1 = BinOp::Mul | BinOp::Div | BinOp::Modulo,
     };
@@ -530,15 +531,19 @@ impl_binop! {
         TokenKind::DoubleAnd => BinOp::LogicalAnd,
         TokenKind::DoubleEquals => BinOp::Equals,
         TokenKind::ExclaimEquals => BinOp::NotEquals,
-        TokenKind::LessThan => BinOp::LessThan,
-        TokenKind::LessThanEquals => BinOp::LessThanOrEquals,
-        TokenKind::GreaterThan => BinOp::GreaterThan,
-        TokenKind::GreaterThanEquals => BinOp::GreaterThanOrEquals,
+        TokenKind::LeftArrowEquals => BinOp::LessThanOrEquals,
+        TokenKind::RightArrowEquals => BinOp::GreaterThanOrEquals,
 
         TokenKind::Plus => BinOp::Add,
         TokenKind::Minus => BinOp::Sub,
         TokenKind::Star => BinOp::Mul,
         TokenKind::Slash => BinOp::Div,
         TokenKind::Percent => BinOp::Modulo,
+
+        TokenKind::RightArrow => BinOp::GreaterThan,
+        TokenKind::LeftArrow => BinOp::LessThan,
+
+        TokenKind::DoubleLeftArrow => BinOp::LeftShift,
+        TokenKind::DoubleRightArrow => BinOp::RightShift,
     }
 }

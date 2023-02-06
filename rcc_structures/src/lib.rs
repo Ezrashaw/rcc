@@ -21,4 +21,7 @@ pub enum BinOp {
     LessThanOrEquals,
     GreaterThan,
     GreaterThanOrEquals,
+
+    LeftShift,
+    RightShift,
 }

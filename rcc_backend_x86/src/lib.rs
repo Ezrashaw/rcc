@@ -144,8 +144,11 @@ impl X86Backend {
                 );
             }
 
-            BinOp::LogicalOr => todo!(),
-            BinOp::LogicalAnd => todo!(),
+            BinOp::LeftShift => write_asm!(ctx, "shll {}, {}", rh, lh),
+            BinOp::RightShift => write_asm!(ctx, "shrl {}, {}", rh, lh),
+
+            BinOp::LogicalOr => panic!("`Instruction::BinOp(LogicalOr)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
+            BinOp::LogicalAnd => panic!("`Instruction::BinOp(LogicalAnd)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
         }
     }
 

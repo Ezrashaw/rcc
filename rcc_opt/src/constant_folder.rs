@@ -34,6 +34,8 @@ impl ConstantFolder {
                     BinOp::LessThanOrEquals => Some(i32::from(lhs <= rhs)),
                     BinOp::GreaterThan => Some(i32::from(lhs > rhs)),
                     BinOp::GreaterThanOrEquals => Some(i32::from(lhs >= rhs)),
+                    BinOp::LeftShift => Some(i32::from(lhs << rhs)),
+                    BinOp::RightShift => Some(i32::from(lhs >> rhs)),
                 }
             }
             Expression::UnaryOp { expr, op } => match op {
