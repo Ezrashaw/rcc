@@ -1,6 +1,5 @@
 use std::{
     io::{stdin, stdout, Read, Write},
-    mem::size_of,
     path::PathBuf,
     process::{Command, Stdio},
 };
@@ -8,7 +7,7 @@ use std::{
 use rcc_backend_arm::ArmBackend;
 use rcc_backend_llvm::LlvmBackend;
 use rcc_backend_x86::X86Backend;
-use rcc_bytecode::{Bytecode, ReadLocation};
+use rcc_bytecode::Bytecode;
 use rcc_lexer::Lexer;
 use rcc_parser::{pretty_printer::PrettyPrinter, Parser};
 

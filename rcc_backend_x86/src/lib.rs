@@ -1,8 +1,10 @@
 use core::panic;
 use rcc_backend_traits::{write_asm, write_asm_no_indent, Backend, BackendContext};
-use rcc_bytecode::{Instruction, ReadLocation, WriteLocation};
+use rcc_bytecode::Instruction;
+use rcc_bytecode::Register;
+use rcc_bytecode::RegisterOrConst;
 use rcc_structures::{BinOp, UnaryOp};
-use register::Register;
+use register::X86Register;
 use std::fmt::Write;
 
 mod register;
@@ -30,11 +32,11 @@ impl Backend for X86Backend {
     fn write_instruction(&mut self, ctx: &mut BackendContext, instruction: &Instruction) {
         match instruction {
             Instruction::Move(from, to) => {
-                write_asm!(ctx, "movl {}, {}", Self::rl(from), Self::wl(to));
+                write_asm!(ctx, "movl {}, {}", Self::roc(from), Self::reg(to));
             }
 
             Instruction::Return(val) => {
-                write_asm!(ctx, "movl {}, %eax", Self::rl(val));
+                write_asm!(ctx, "movl {}, %eax", Self::roc(val));
                 write_asm!(
                     ctx,
                     "pop %rbp # restore old RBP; now RSP is where it was before prologue"
@@ -42,90 +44,112 @@ impl Backend for X86Backend {
                 write_asm!(ctx, "ret");
             }
             Instruction::CompareJump(val, should_jump, jump_loc) => {
-                write_asm!(ctx, "cmpl $0, {} # check if expr is true", Self::wl(val));
+                // this is interesting: we have to upgrade because
+                // `cmpl $0, $1` isn't allowed. This makes perfect sense and we
+                // should optimize it out.
+                let val = Self::upgrade_roc(ctx, val);
+                write_asm!(ctx, "cmpl $0, {}", val);
+
                 write_asm!(
                     ctx,
-                    "j{} _{jump_loc}  # if so, jump",
+                    "j{} _{jump_loc}",
                     if *should_jump { "ne" } else { "e" }
                 );
             }
 
-            Instruction::NormalizeBoolean(wl) => {
-                write_asm!(ctx, "cmpl $0, {}  # check if e2 is true", Self::wl(wl));
-                write_asm!(ctx, "setne %{}", Register::from_u8(wl.reg()).get_low_8());
+            Instruction::NormalizeBoolean(reg) => {
+                write_asm!(ctx, "cmpl $0, {}  # check if e2 is true", Self::reg(reg));
+                write_asm!(ctx, "setne {}", Self::reg_low_8(reg));
             }
 
-            Instruction::AssignVariable(var, rl) => {
-                write_asm!(ctx, "movl {}, {}", Self::rl(rl), Self::var(*var));
+            Instruction::AssignVariable(var, val) => {
+                write_asm!(ctx, "movl {}, {}", Self::roc(val), Self::var(*var));
             }
-            Instruction::LoadVariable(var, wl) => {
-                write_asm!(ctx, "movl {}, {}", Self::var(*var), Self::wl(wl));
+            Instruction::LoadVariable(var, reg) => {
+                write_asm!(ctx, "movl {}, {}", Self::var(*var), Self::reg(reg));
             }
 
             Instruction::JumpDummy(loc) => write_asm_no_indent!(ctx, "_{loc}:"),
             Instruction::UnconditionalJump(loc) => write_asm!(ctx, "jmp _{loc}"),
 
             Instruction::BinaryOp(op, lhs, rhs) => Self::write_binary_op(ctx, *op, lhs, rhs),
-            Instruction::UnaryOp(op, wl) => Self::write_unary_op(ctx, *op, wl),
+            Instruction::UnaryOp(op, reg) => Self::write_unary_op(ctx, *op, reg),
         }
     }
 }
 
 impl X86Backend {
-    fn wl(loc: &WriteLocation) -> String {
-        format!("%{}", Register::from_u8(loc.reg()))
+    /// Gets the x86 string for the given bytecode register.
+    fn reg(reg: &Register) -> &'static str {
+        X86Register::from_u8(reg.register_number()).get_str()
     }
 
-    fn rl(loc: &ReadLocation) -> String {
-        match loc {
-            ReadLocation::Writable(wloc) => Self::wl(wloc),
-            ReadLocation::Constant(val) => format!("${val}"),
+    /// Gets the x86 string for the low 8 bits (low byte) of the given bytecode
+    /// register.
+    fn reg_low_8(reg: &Register) -> &'static str {
+        X86Register::from_u8(reg.register_number()).get_low_8()
+    }
+
+    /// Gets the x86 string for the given [`RegisterOrConst`].
+    fn roc(val: &RegisterOrConst) -> String {
+        match val {
+            RegisterOrConst::Register(reg) => Self::reg(reg).to_string(),
+            RegisterOrConst::Constant(val) => format!("${val}"),
         }
     }
 
+    /// Gets the x86 string for the given variable id.
     fn var(id: u32) -> String {
         format!("-{}(%rbp)", (id + 1) * 4)
     }
 
-    fn write_unary_op(ctx: &mut BackendContext, op: UnaryOp, loc: &WriteLocation) {
-        let wl = Self::wl(loc);
+    /// Ensures that the given [`RegisterOrConst`] is in a register.
+    ///
+    /// If that is not the case, then the value is put in `%ebx`. The reason
+    /// that this upgrade is done here (and not in AST lowering) is because
+    /// these upgrades are for inherently x86 reasons and might not be
+    /// applicable to other backends.
+    fn upgrade_roc(ctx: &mut BackendContext, val: &RegisterOrConst) -> String {
+        if matches!(val, RegisterOrConst::Constant(_)) {
+            write_asm!(
+                ctx,
+                "movl {}, %ebx  # upgraded in x86 backend",
+                Self::roc(val)
+            );
+
+            "%ebx".to_owned()
+        } else {
+            Self::roc(val)
+        }
+    }
+
+    fn write_unary_op(ctx: &mut BackendContext, op: UnaryOp, register: &Register) {
+        let reg = Self::reg(register);
         match op {
-            UnaryOp::Negation => write_asm!(ctx, "neg {wl}"),
-            UnaryOp::BitwiseComplement => write_asm!(ctx, "not {wl}"),
+            UnaryOp::Negation => write_asm!(ctx, "neg {reg}"),
+            UnaryOp::BitwiseComplement => write_asm!(ctx, "not {reg}"),
             UnaryOp::LogicalNegation => {
-                write_asm!(ctx, "cmpl   $0, {wl}");
-                write_asm!(ctx, "sete %{}", Register::from_u8(loc.reg()).get_low_8());
+                write_asm!(ctx, "cmpl $0, {reg}");
+                write_asm!(ctx, "sete {}", Self::reg_low_8(register));
             }
         }
     }
 
-    fn write_binary_op(
-        ctx: &mut BackendContext,
-        op: BinOp,
-        lhs: &WriteLocation,
-        rhs: &ReadLocation,
-    ) {
-        let lh = Self::wl(lhs);
-        let rh = Self::rl(rhs);
+    fn write_binary_op(ctx: &mut BackendContext, op: BinOp, lhs: &Register, rhs: &RegisterOrConst) {
+        let lh = Self::reg(lhs);
+        let rh = Self::roc(rhs);
 
         match op {
             BinOp::Add => write_asm!(ctx, "addl {rh}, {lh}"),
             BinOp::Sub => write_asm!(ctx, "subl {rh}, {lh}"),
             BinOp::Mul => write_asm!(ctx, "imul {rh}, {lh}"),
             BinOp::Div => {
-                // x86 division (`idiv`) requires the dividend to be in EDX:EAX, and
-                // the divisor register is passed separately. This is fine as we
-                // don't use EAX or EDX as allocatable registers.
-                write_asm!(ctx, "movl {lh}, %eax");
-                write_asm!(ctx, "cdq");
-                write_asm!(ctx, "idiv {rh}");
+                Self::write_division(ctx, lh, rhs);
                 write_asm!(ctx, "movl %eax, {lh}");
             }
             BinOp::Modulo => {
+                Self::write_division(ctx, lh, rhs);
                 // same as division, we can just use EDX for the remainder.
-                write_asm!(ctx, "movl {lh}, %eax");
-                write_asm!(ctx, "cdq");
-                write_asm!(ctx, "idiv {rh}");
                 write_asm!(ctx, "movl %edx, {lh}");
             }
 
@@ -139,9 +163,9 @@ impl X86Backend {
                 write_asm!(ctx, "movl $0, {lh}");
                 write_asm!(
                     ctx,
-                    "set{} %{}",
+                    "set{} {}",
                     Self::get_relational_instruction(op),
-                    Register::from_u8(lhs.reg()).get_low_8()
+                    Self::reg_low_8(lhs)
                 );
             }
 
@@ -167,5 +191,22 @@ impl X86Backend {
             BinOp::GreaterThanOrEquals => "ge",
             _ => panic!("provided binop was not relational operator!"),
         }
+    }
+
+    /// Write a division instruction into the [`BackendContext`].
+    ///
+    /// This is used by both [`BinOp::Modulo`] and [`BinOp::Div`].
+    fn write_division(ctx: &mut BackendContext, lhs: &str, rhs: &RegisterOrConst) {
+        // x86 division (`idiv`) requires the dividend to be in EDX:EAX, and
+        // the divisor register is passed separately. This is fine as we
+        // don't use EAX or EDX as allocatable registers.
+        write_asm!(ctx, "movl {lhs}, %eax");
+        write_asm!(ctx, "cdq");
+
+        // x86 cannot divide by a constant value.
+        // FIXME: we could do some crazy stuff to convert division by a
+        //        constant into additions and bitshifts (etc).
+        let rh = Self::upgrade_roc(ctx, rhs);
+        write_asm!(ctx, "idiv {rh}");
     }
 }

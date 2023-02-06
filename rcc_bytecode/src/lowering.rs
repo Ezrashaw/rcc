@@ -1,7 +1,7 @@
 use rcc_parser::ast::{Block, BlockItem, Expression, Statement};
 use rcc_structures::BinOp;
 
-use crate::{Bytecode, Instruction, ReadLocation};
+use crate::{Bytecode, Instruction, RegisterOrConst};
 
 /// Defines `append_from_*` methods, used internally to lower from AST.
 impl Bytecode<'_> {
@@ -36,11 +36,8 @@ impl Bytecode<'_> {
             // If a variable is declared but not initialized, then we can just
             // initialize to 0. The standard does not specify a value for this
             // situation. Ahh, the wonders of C.
-            ReadLocation::Constant(0)
+            RegisterOrConst::Constant(0)
         };
-
-        // aarch64 limitations
-        let reg = self.upgrade_readable(reg).downgrade();
 
         self.append_instruction(Instruction::AssignVariable(*id, reg.clone()));
         self.dealloc_reg(reg);
@@ -75,7 +72,6 @@ impl Bytecode<'_> {
                 self.append_instruction(Instruction::JumpDummy(evaluate_label));
 
                 let controlling_loc = self.append_from_expression(controlling);
-                let controlling_loc = self.upgrade_readable(controlling_loc);
 
                 self.append_instruction(Instruction::CompareJump(
                     controlling_loc.clone(),
@@ -83,7 +79,7 @@ impl Bytecode<'_> {
                     post_label,
                 ));
 
-                self.dealloc_reg(controlling_loc.downgrade());
+                self.dealloc_reg(controlling_loc);
 
                 self.append_from_statement(body);
                 self.append_instruction(Instruction::UnconditionalJump(evaluate_label));
@@ -106,7 +102,6 @@ impl Bytecode<'_> {
                 self.append_from_statement(body);
 
                 let controlling_loc = self.append_from_expression(controlling);
-                let controlling_loc = self.upgrade_readable(controlling_loc);
 
                 self.append_instruction(Instruction::CompareJump(
                     controlling_loc.clone(),
@@ -114,7 +109,7 @@ impl Bytecode<'_> {
                     pre_body,
                 ));
 
-                self.dealloc_reg(controlling_loc.downgrade());
+                self.dealloc_reg(controlling_loc);
 
                 self.loop_start.pop();
                 self.loop_end.pop();
@@ -172,10 +167,9 @@ impl Bytecode<'_> {
 
         self.append_instruction(Instruction::JumpDummy(pre_condition));
         let reg = self.append_from_expression(condition);
-        let reg = self.upgrade_readable(reg);
 
         self.append_instruction(Instruction::CompareJump(reg.clone(), false, post_loop));
-        self.dealloc_reg(reg.downgrade());
+        self.dealloc_reg(reg);
 
         self.append_from_statement(body);
 
@@ -198,7 +192,7 @@ impl Bytecode<'_> {
     /// This function will allocate and return a location for the
     /// result of the expression to be stored in. This does not preclude this
     /// function from allocating more intermediate registers.
-    fn append_from_expression(&mut self, expr: &Expression) -> ReadLocation {
+    fn append_from_expression(&mut self, expr: &Expression) -> RegisterOrConst {
         match expr {
             Expression::BinOp { lhs, rhs, op, .. } => {
                 let lhs = self.append_from_expression(lhs);
@@ -209,12 +203,12 @@ impl Bytecode<'_> {
                     self.label_counter += 1;
 
                     self.append_instruction(Instruction::CompareJump(
-                        lhs.clone(),
+                        lhs.clone().downgrade(),
                         *op == BinOp::LogicalOr,
                         label,
                     ));
 
-                    self.dealloc_reg(ReadLocation::Writable(lhs));
+                    self.dealloc_reg(lhs.downgrade());
 
                     // FIXME: hack: this assumes that we'll get the same register as before (certainly this isn't right).
                     let rhs = self.append_from_expression(rhs);
@@ -226,27 +220,6 @@ impl Bytecode<'_> {
                 }
 
                 let rhs = self.append_from_expression(rhs);
-
-                // aarch64 requires that the RHS for these binary operaors are in registers.
-                let rhs = if let BinOp::Mul
-                | BinOp::GreaterThan
-                | BinOp::GreaterThanOrEquals
-                | BinOp::LessThan
-                | BinOp::LessThanOrEquals
-                | BinOp::NotEquals
-                | BinOp::Equals = op
-                {
-                    self.upgrade_readable(rhs).downgrade()
-                } else {
-                    rhs
-                };
-
-                // FIXME: hack because `idiv` on x86 cannot take immediate (constant) rhs values.
-                let rhs = if let BinOp::Div | BinOp::Modulo = op {
-                    self.upgrade_readable(rhs).downgrade()
-                } else {
-                    rhs
-                };
 
                 self.append_instruction(Instruction::BinaryOp(*op, lhs.clone(), rhs.clone()));
 
@@ -261,14 +234,12 @@ impl Bytecode<'_> {
 
                 wloc.downgrade()
             }
-            Expression::Literal { val } => ReadLocation::Constant(*val),
+            Expression::Literal { val } => RegisterOrConst::Constant(*val),
             Expression::Assignment {
                 identifier,
                 expression,
             } => {
                 let reg = self.append_from_expression(expression);
-                // aarch64 limitations
-                let reg = self.upgrade_readable(reg).downgrade();
 
                 self.append_instruction(Instruction::AssignVariable(*identifier, reg.clone()));
 
@@ -288,12 +259,9 @@ impl Bytecode<'_> {
                 // FIXME: copied from below, merge please
                 let controlling = self.append_from_expression(controlling);
 
-                // FIXME: you know the deal, x86 constraints. GAHH, it's also below.
-                let controlling = self.upgrade_readable(controlling);
-
                 // the first instructions to be encountered from here will read the reg
                 // and redirect control flow; it is no longer needed.
-                self.dealloc_reg(controlling.downgrade());
+                self.dealloc_reg(controlling.clone());
 
                 self.label_counter += 2;
                 let post_else = self.label_counter - 1;
@@ -327,12 +295,9 @@ impl Bytecode<'_> {
     ) {
         let controlling = self.append_from_expression(expr);
 
-        // FIXME: you know the deal, x86 constraints
-        let controlling = self.upgrade_readable(controlling);
-
         // the first instructions to be encountered from here will read the reg
         // and redirect control flow; it is no longer needed.
-        self.dealloc_reg(controlling.downgrade());
+        self.dealloc_reg(controlling.clone());
 
         if let Some(false_branch) = false_branch {
             self.label_counter += 2;

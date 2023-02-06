@@ -7,13 +7,13 @@ use rcc_structures::{BinOp, UnaryOp};
 /// (the x86 backend overflows registers to the stack)
 #[derive(Debug, Clone)]
 pub enum Instruction {
-    /// Moves a value from one location into another.
-    Move(ReadLocation, WriteLocation),
+    /// Moves a value into a register.
+    Move(RegisterOrConst, Register),
 
-    /// Returns the value from the given location.
-    Return(ReadLocation),
+    /// Returns from the currently executing function with the specified value.
+    Return(RegisterOrConst),
 
-    /// Applies the given binary operation to the two locations.
+    /// Applies the given binary operation to the two values.
     ///
     /// Note that the first location is the LHS and the second the RHS.
     /// The result is stored in the LHS location.
@@ -21,36 +21,33 @@ pub enum Instruction {
     /// IMPORTANT: binary logical boolean operations are not implemented with
     /// this instruction, use [`Instruction::CompareJump`] and
     /// [`Instruction::NormalizeBoolean`] instead.
-    BinaryOp(BinOp, WriteLocation, ReadLocation),
+    BinaryOp(BinOp, Register, RegisterOrConst),
 
-    /// Applies the given unary operation to the specified location.
-    UnaryOp(UnaryOp, WriteLocation),
+    /// Applies the given unary operation to the specified register.
+    UnaryOp(UnaryOp, Register),
 
-    /// If the given location is equal to `bool` (in the C style: all non-zero
+    /// If the given value is equal to `bool` (in the C style: all non-zero
     /// integers are truthy), then jump to the specified location.
     ///
     /// Used in loops to exit if the the condition is false, and in
     /// short-circuiting binary boolean operations.
-    ///
-    /// *HACK*: currently this needs a [`WriteLocation`], x86 cannot compare two constants (fair enough).
-    // FIXME: see doc-comment
-    CompareJump(WriteLocation, bool, u32),
+    CompareJump(RegisterOrConst, bool, u32),
 
     /// Normalize the second clause of a logical boolean binary operation
     /// (i.e. make all non-zero = 1)
-    NormalizeBoolean(WriteLocation),
+    NormalizeBoolean(Register),
 
     /// Modifies/declares a local variable.
     ///
     /// Assigns the variable with the given identifier, for x86 these are
     /// multiplied and converted to `EBP` offsets.
-    AssignVariable(u32, ReadLocation),
+    AssignVariable(u32, RegisterOrConst),
 
     /// Loads the local variable into the given location.
     ///
     /// Uses the same logic as [`Instruction::AssignVariable`] for finding
     /// stack offsets.
-    LoadVariable(u32, WriteLocation),
+    LoadVariable(u32, Register),
 
     /// An instruction which specifies where another instruction should jump
     /// to.
@@ -66,34 +63,38 @@ pub enum Instruction {
     UnconditionalJump(u32),
 }
 
-/// Someplace where a value can be read.
+/// A value that can be used as an operand in a [`Instruction`].
 ///
-/// Could be constant, in memory, or a register.
+/// Constants are especially useful here for optimization purposes.
 #[derive(Debug, Clone)]
-pub enum ReadLocation {
+pub enum RegisterOrConst {
     /// We can read from any writable place as well.
     ///
     /// More and more this feels like I'm trying to mimic Rust's memory model. *sighh*
-    Writable(WriteLocation),
+    Register(Register),
 
     /// The value is constant and is not stored anywhere.
     Constant(i32),
 }
 
-/// A location where a value can be stored.
+/// A `rcc` bytecode register.
 ///
-/// Currently only can be a register.
-/// Note that the value doesn't have to be in a hardware register, bytecode
-/// registers and hardware registers are different.
+/// 256 registers exist in the `rcc` bytecode VM, these are mapped to hardware
+/// registers and eventually overflow to the stack.
 #[derive(Debug, Clone, PartialEq)]
-pub struct WriteLocation(pub(crate) u8);
+pub struct Register(pub(crate) u8);
 
-impl WriteLocation {
-    pub(crate) fn downgrade(&self) -> ReadLocation {
-        ReadLocation::Writable(self.clone())
+impl Register {
+    /// Convert the [`Register`] to a [`RegisterOrConst`].
+    pub(crate) fn downgrade(self) -> RegisterOrConst {
+        RegisterOrConst::Register(self)
     }
 
-    pub fn reg(&self) -> u8 {
+    /// Gets the actual underlying register's identifier.
+    ///
+    /// This value is then mapped to a hardware register, or some other
+    /// storage location.
+    pub fn register_number(&self) -> u8 {
         self.0
     }
 }

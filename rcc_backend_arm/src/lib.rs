@@ -1,9 +1,9 @@
 mod register;
 
 use rcc_backend_traits::{write_asm, write_asm_no_indent, Backend, BackendContext};
-use rcc_bytecode::{Instruction, ReadLocation, WriteLocation};
+use rcc_bytecode::{Instruction, Register, RegisterOrConst};
 use rcc_structures::{BinOp, UnaryOp};
-use register::Register;
+use register::ArmRegister;
 use std::fmt::Write;
 
 pub struct ArmBackend;
@@ -26,17 +26,17 @@ impl Backend for ArmBackend {
     fn write_instruction(&mut self, ctx: &mut BackendContext, instruction: &Instruction) {
         match instruction {
             Instruction::Move(from, to) => {
-                write_asm!(ctx, "mov {}, {}", Self::wl(to), Self::rl(from));
+                write_asm!(ctx, "mov {}, {}", Self::reg(to), Self::roc(from));
             }
 
-            Instruction::Return(loc) => {
-                write_asm!(ctx, "mov w0, {}", Self::rl(loc));
+            Instruction::Return(val) => {
+                write_asm!(ctx, "mov w0, {}", Self::roc(val));
                 write_asm!(ctx, "add sp, sp, #32");
                 write_asm!(ctx, "ret");
             }
 
-            Instruction::CompareJump(rloc, should_jump, jump_loc) => {
-                write_asm!(ctx, "cmp {}, #0", Self::wl(rloc));
+            Instruction::CompareJump(val, should_jump, jump_loc) => {
+                write_asm!(ctx, "cmp {}, #0", Self::roc(val));
                 write_asm!(
                     ctx,
                     "{} _{jump_loc}",
@@ -44,64 +44,62 @@ impl Backend for ArmBackend {
                 );
             }
 
-            Instruction::NormalizeBoolean(wloc) => {
-                write_asm!(ctx, "cmp {}, #0", Self::wl(wloc));
-                write_asm!(ctx, "cset {}, ne", Self::wl(wloc));
+            Instruction::NormalizeBoolean(reg) => {
+                write_asm!(ctx, "cmp {}, #0", Self::reg(reg));
+                write_asm!(ctx, "cset {}, ne", Self::reg(reg));
             }
 
-            Instruction::AssignVariable(var, rloc) => {
-                write_asm!(ctx, "str {}, {}", Self::rl(rloc), Self::var(*var));
+            Instruction::AssignVariable(var, val) => {
+                write_asm!(ctx, "str {}, {}", Self::roc(val), Self::var(*var));
             }
-            Instruction::LoadVariable(var, wloc) => {
-                write_asm!(ctx, "ldr {}, {}", Self::wl(wloc), Self::var(*var));
+            Instruction::LoadVariable(var, reg) => {
+                write_asm!(ctx, "ldr {}, {}", Self::reg(reg), Self::var(*var));
             }
 
             Instruction::JumpDummy(loc) => write_asm_no_indent!(ctx, "_{loc}:"),
             Instruction::UnconditionalJump(loc) => write_asm!(ctx, "b _{loc}"),
 
-            Instruction::BinaryOp(op, lhs, rhs) => self.write_binary_op(ctx, *op, lhs, rhs),
-            Instruction::UnaryOp(op, wloc) => self.write_unary_op(ctx, *op, wloc),
+            Instruction::BinaryOp(op, lhs, rhs) => Self::write_binary_op(ctx, *op, lhs, rhs),
+            Instruction::UnaryOp(op, reg) => Self::write_unary_op(ctx, *op, reg),
         }
     }
 }
 
 impl ArmBackend {
-    fn wl(loc: &WriteLocation) -> String {
-        format!("{}", Register::from_u8(loc.reg()))
+    /// Gets the ARM string for the given bytecode register.
+    fn reg(reg: &Register) -> &'static str {
+        ArmRegister::from_u8(reg.register_number()).get_str()
     }
 
-    fn rl(loc: &ReadLocation) -> String {
-        match loc {
-            ReadLocation::Writable(wloc) => Self::wl(wloc),
-            ReadLocation::Constant(val) => format!("#{val}"),
+    /// Gets the ARM string for the given [`RegisterOrConst`].
+    fn roc(val: &RegisterOrConst) -> String {
+        match val {
+            RegisterOrConst::Register(reg) => Self::reg(reg).to_string(),
+            RegisterOrConst::Constant(val) => format!("#{val}"),
         }
     }
 
+    /// Gets the ARM string for the given variable id.
     fn var(id: u32) -> String {
         format!("[sp, {}]", 32 - (id + 1) * 4)
     }
 
-    fn write_unary_op(&mut self, ctx: &mut BackendContext, op: UnaryOp, wloc: &WriteLocation) {
-        let wl = Self::wl(wloc);
+    fn write_unary_op(ctx: &mut BackendContext, op: UnaryOp, register: &Register) {
+        let reg = Self::reg(register);
         match op {
-            UnaryOp::Negation => write_asm!(ctx, "neg {wl}, {wl}"),
-            UnaryOp::BitwiseComplement => write_asm!(ctx, "mvn {wl}, {wl}"),
+            UnaryOp::Negation => write_asm!(ctx, "neg {reg}"),
+            UnaryOp::BitwiseComplement => write_asm!(ctx, "mvn {reg}"),
             UnaryOp::LogicalNegation => {
-                write_asm!(ctx, "cmp {wl}, #0");
-                write_asm!(ctx, "cset {wl}, eq");
+                write_asm!(ctx, "cmp {reg}, #0");
+                write_asm!(ctx, "cset {reg}, eq");
             }
         }
     }
 
-    fn write_binary_op(
-        &mut self,
-        ctx: &mut BackendContext,
-        op: BinOp,
-        lhs: &WriteLocation,
-        rhs: &ReadLocation,
-    ) {
-        let lh = Self::wl(lhs);
-        let rh = Self::rl(rhs);
+    fn write_binary_op(ctx: &mut BackendContext, op: BinOp, lhs: &Register, rhs: &RegisterOrConst) {
+        let lh = Self::reg(lhs);
+        let rh = Self::roc(rhs);
+
         match op {
             BinOp::Add => write_asm!(ctx, "add  {lh}, {lh}, {rh}"),
             BinOp::Sub => write_asm!(ctx, "sub  {lh}, {lh}, {rh}"),

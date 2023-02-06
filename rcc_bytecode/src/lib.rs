@@ -6,7 +6,7 @@ mod instruction;
 mod lowering;
 mod utils;
 
-pub use instruction::{Instruction, ReadLocation, WriteLocation};
+pub use instruction::{Instruction, Register, RegisterOrConst};
 
 /// `rcc` intermediate representation.
 ///
@@ -25,7 +25,7 @@ pub struct Bytecode<'a> {
     // "internal" fields
     label_counter: u32,
     // FIXME: come up with some algorithim or something to remove this vec
-    allocated_registers: Vec<WriteLocation>,
+    allocated_registers: Vec<Register>,
     loop_start: Vec<u32>,
     loop_end: Vec<u32>,
 }
