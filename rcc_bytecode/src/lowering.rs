@@ -293,7 +293,7 @@ impl Bytecode<'_> {
 
                 // the first instructions to be encountered from here will read the reg
                 // and redirect control flow; it is no longer needed.
-                self.dealloc_reg(controlling.clone().downgrade());
+                self.dealloc_reg(controlling.downgrade());
 
                 self.label_counter += 2;
                 let post_else = self.label_counter - 1;
@@ -332,7 +332,7 @@ impl Bytecode<'_> {
 
         // the first instructions to be encountered from here will read the reg
         // and redirect control flow; it is no longer needed.
-        self.dealloc_reg(controlling.clone().downgrade());
+        self.dealloc_reg(controlling.downgrade());
 
         if let Some(false_branch) = false_branch {
             self.label_counter += 2;

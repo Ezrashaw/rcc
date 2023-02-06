@@ -11,10 +11,12 @@ pub struct ArmBackend;
 impl Backend for ArmBackend {
     fn write_function(&mut self, ctx: &mut BackendContext, fn_name: &str) {
         if std::env::consts::OS == "macos" {
-            write_asm!(ctx, ".globl _{fn_name}\n_{fn_name}:");
+            write_asm!(ctx, ".globl _{fn_name}");
+            write_asm_no_indent!(ctx, "_{fn_name}:");
         } else {
-            write_asm!(ctx, ".globl {fn_name}\n{fn_name}:");
-        }
+            write_asm!(ctx, ".globl {fn_name}");
+            write_asm_no_indent!(ctx, "{fn_name}:");
+        };
 
         // write function prologue, sets up a stack frame
         // HACK: you don't need more than 8 variables right?

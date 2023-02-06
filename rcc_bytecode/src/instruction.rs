@@ -19,8 +19,8 @@ pub enum Instruction {
     /// The result is stored in the LHS location.
     ///
     /// IMPORTANT: binary logical boolean operations are not implemented with
-    /// this instruction, use [`Instruction::ShortCircuit`] and
-    /// [`Instruction::BinaryBooleanOp`] instead.
+    /// this instruction, use [`Instruction::CompareJump`] and
+    /// [`Instruction::NormalizeBoolean`] instead.
     BinaryOp(BinOp, WriteLocation, ReadLocation),
 
     /// Applies the given unary operation to the specified location.

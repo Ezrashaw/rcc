@@ -32,7 +32,7 @@ impl BackendContext {
             "",
             width = (self.indent_lvl as usize * 4)
         )
-        .unwrap()
+        .unwrap();
     }
 }
 
@@ -71,10 +71,10 @@ fn generate_from_function(
     bytecode: &Bytecode,
     backend: &mut impl Backend,
 ) {
+    ctx.increment_indent();
+
     backend.write_function(ctx, bytecode.fn_name());
     writeln!(ctx.buf).unwrap();
-
-    ctx.increment_indent();
 
     for instr in bytecode.instructions() {
         write_asm!(ctx, "# {instr:?}");

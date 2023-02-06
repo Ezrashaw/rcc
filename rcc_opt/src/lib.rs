@@ -3,7 +3,7 @@ mod variable_inliner;
 
 pub use constant_folder::ConstantFolder;
 use rcc_parser::ast::{Block, BlockItem, Expression, Function, Program, Statement};
-use variable_inliner::VariableInliner;
+
 
 /// Defines the interface for creating an optimization pass.
 ///
@@ -16,7 +16,7 @@ pub(crate) trait OptimizationPass {
     fn opt_expression(&mut self, _: &mut Expression) {}
 }
 
-pub fn optimize_ast(ast: &mut Program) {
+pub fn optimize_ast(_ast: &mut Program) {
     // optimize_ast_with_pass(ast, &mut ConstantFolder);
 
     // // remove useless statements

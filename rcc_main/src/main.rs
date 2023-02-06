@@ -1,5 +1,6 @@
 use std::{
     io::{stdin, stdout, Read, Write},
+    mem::size_of,
     path::PathBuf,
     process::{Command, Stdio},
 };
@@ -7,7 +8,7 @@ use std::{
 use rcc_backend_arm::ArmBackend;
 use rcc_backend_llvm::LlvmBackend;
 use rcc_backend_x86::X86Backend;
-use rcc_bytecode::Bytecode;
+use rcc_bytecode::{Bytecode, ReadLocation};
 use rcc_lexer::Lexer;
 use rcc_parser::{pretty_printer::PrettyPrinter, Parser};
 
@@ -137,7 +138,7 @@ fn compile_program_verbose(input: &str) -> String {
 
     println!("===================");
 
-    gen_asm(bytecode, true)
+    gen_asm(&bytecode, true)
 }
 
 fn compile_program(input: &str) -> String {
@@ -152,10 +153,10 @@ fn compile_program(input: &str) -> String {
 
     let bytecode = Bytecode::from_ast(&ast);
 
-    gen_asm(bytecode, false)
+    gen_asm(&bytecode, false)
 }
 
-fn gen_asm(bytecodes: Vec<Bytecode>, verbose: bool) -> String {
+fn gen_asm(bytecodes: &[Bytecode], verbose: bool) -> String {
     if verbose {
         print!("====== ");
     }
@@ -164,7 +165,7 @@ fn gen_asm(bytecodes: Vec<Bytecode>, verbose: bool) -> String {
         if verbose {
             print!("LLVM IR");
         }
-        LlvmBackend::gen_llvm(&bytecodes.first().unwrap())
+        LlvmBackend::gen_llvm(bytecodes.first().unwrap())
     } else {
         let arch = std::env::consts::ARCH;
         match arch {

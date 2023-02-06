@@ -27,7 +27,7 @@ impl<'a, 'b> PrettyPrinter<'a, 'b> {
         write!(self.buf, "%{var}")
     }
 
-    pub fn print(mut self) -> io::Result<()> {
+    pub fn print(self) -> io::Result<()> {
         // self.print_fn(&self.ast.function)
 
         Ok(())
