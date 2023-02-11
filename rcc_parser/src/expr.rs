@@ -6,6 +6,19 @@ use rcc_lexer::{Token, TokenKind};
 use rcc_structures::UnaryOp;
 
 impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
+    /// Parses an expression wrapped in parentheses.
+    /// 
+    /// There is no formal grammar rule in the C11 standard which corresponds
+    /// to this function, however it is used often (in `if` statements and
+    /// loops, etc).
+    pub(crate) fn parse_paren_expression(&mut self) -> Expression<'a> {
+        self.expect_token(TokenKind::OpenParen);
+        let expr = self.parse_expression();
+        self.expect_token(TokenKind::CloseParen);
+
+        expr
+    }
+
     /// Parses an expression or nothing at all.
     ///
     /// Parses the `6.5.1 expression(opt)` grammar as per Annex A of the N1548 draft

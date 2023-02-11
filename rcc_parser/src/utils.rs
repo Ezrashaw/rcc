@@ -75,6 +75,18 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         SpannedError::without_span("undefined variable").emit();
     }
 
+    pub(crate) fn define_variable(&mut self, ident: &'a str) -> u32 {
+        let current_scope = self.scopes.last_mut().unwrap();
+
+        if current_scope.contains(&ident) {
+            SpannedError::without_span("variable already defined").emit()
+        }
+
+        current_scope.push(ident);
+
+        self.scopes.iter().flatten().count() as u32 - 1
+    }
+
     pub(crate) fn expect_token(&mut self, expected_kind: TokenKind) {
         if self.peek_kind() == &expected_kind {
             self.drop_next();
