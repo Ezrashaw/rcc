@@ -13,6 +13,7 @@ mod utils;
 use ast::{BlockItem, Function};
 use peekmore::{PeekMore, PeekMoreIterator};
 use rcc_lexer::{Keyword, Token, TokenKind};
+use utils::maybe_next;
 
 /// A parser for the `C` programming language.
 ///

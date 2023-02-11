@@ -42,10 +42,7 @@ impl<'a> Lexer<'a> {
         if self.pos as usize + len > self.input.len() {
             None
         } else {
-            Some(
-                Some(&self.input[self.pos as usize..(self.pos as usize + len)])
-                .unwrap(),
-            )
+            Some(Some(&self.input[self.pos as usize..(self.pos as usize + len)]).unwrap())
         }
     }
 
@@ -78,8 +75,8 @@ impl<'a> Lexer<'a> {
 
 macro_rules! const_tokens {
     ( $( $in:literal => $tok:expr, )+ ) => {
-        impl<'a> crate::common::Lexer<'a> {
-            fn match_const_tokens(&mut self) -> Option<crate::TokenKind<'static>> {
+        impl<'a> $crate::common::Lexer<'a> {
+            fn match_const_tokens(&mut self) -> Option<$crate::TokenKind<'static>> {
                 $(
                     if self.peek_length($in.len()).unwrap_or_default() == $in {
                         self.pos += $in.len() as u32;
@@ -103,7 +100,7 @@ macro_rules! const_tokens {
 /// Tokens are attempted in the order in which they appear in the macro.
 macro_rules! multi_char_tokens {
     ( $({ start: $start:expr, continue: $continue:expr, final: $final:expr },)+ ) => {
-        impl<'a> crate::common::Lexer<'a> {
+        impl<'a> $crate::common::Lexer<'a> {
             fn match_multi_char_tokens(&mut self, peeked: char) -> Option<TokenKind<'a>> {
                 match peeked {
                     $(ch if $start(ch) => {

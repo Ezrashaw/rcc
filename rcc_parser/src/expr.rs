@@ -1,6 +1,6 @@
 use std::ops::BitXor;
 
-use crate::{ast::{Expression, UnaryOp, BinOp}, maybe_next, maybe_peek, maybe_peek_nth, Parser};
+use crate::{ast::{Expression, UnaryOp, BinOp}, utils::{maybe_next, maybe_peek, maybe_peek_nth}, Parser};
 use rcc_error::SpannedError;
 use rcc_lexer::{Token, TokenKind};
 
@@ -152,8 +152,8 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
 macro_rules! impl_binop {
     (enum binary_op_levels {$( $lvl:literal = $match:pat, )+}; match tokens_to_binary_ops {$($token:pat => $op:expr,)*} ) => {
-        impl<'a, I: ::std::iter::Iterator<Item = ::rcc_lexer::Token<'a>>> crate::Parser<'a, I> {
-            fn map_tok_to_op(tok: &::rcc_lexer::TokenKind) -> Option<crate::ast::BinOp> {
+        impl<'a, I: ::std::iter::Iterator<Item = ::rcc_lexer::Token<'a>>> $crate::Parser<'a, I> {
+            fn map_tok_to_op(tok: &::rcc_lexer::TokenKind) -> Option<$crate::ast::BinOp> {
                 match tok {
                     $($token => Some($op),)*
                     _ => None
@@ -164,11 +164,11 @@ macro_rules! impl_binop {
             /// 
             /// Parses the `6.5.14 logical-OR-expression` grammar as per
             /// Annex A of the N1548 draft of the C11 standard.
-            fn parse_binop(&mut self) -> crate::ast::Expression<'a> {
+            fn parse_binop(&mut self) -> $crate::ast::Expression<'a> {
                 self.parse_binop_impl(10)
             }
 
-            fn parse_binop_impl(&mut self, lvl: u8) -> crate::ast::Expression<'a> {
+            fn parse_binop_impl(&mut self, lvl: u8) -> $crate::ast::Expression<'a> {
                 if lvl == 0 {
                     return self.parse_operand();
                 }
@@ -182,7 +182,7 @@ macro_rules! impl_binop {
 
                             let rhs = self.parse_binop_impl(lvl - 1);
 
-                            lhs = crate::ast::Expression::BinOp { lhs: Box::new(lhs), rhs: Box::new(rhs), op }
+                            lhs = $crate::ast::Expression::BinOp { lhs: Box::new(lhs), rhs: Box::new(rhs), op }
                         }
 
                         lhs

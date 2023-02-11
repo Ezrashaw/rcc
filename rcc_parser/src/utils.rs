@@ -96,7 +96,6 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
     }
 }
 
-#[macro_export]
 macro_rules! maybe_next {
     ($parser:expr, $pattern:pat) => {{
         if matches!($parser.peek_kind(), $pattern) {
@@ -109,16 +108,16 @@ macro_rules! maybe_next {
     }};
 }
 
-#[macro_export]
 macro_rules! maybe_peek {
     ($parser:expr, $pattern:pat) => {{
         matches!($parser.peek_kind(), $pattern)
     }};
 }
 
-#[macro_export]
 macro_rules! maybe_peek_nth {
     ($parser:expr, $nth:literal, $pattern:pat) => {{
         matches!($parser.peek_nth_kind($nth), $pattern)
     }};
 }
+
+pub(crate) use {maybe_next, maybe_peek, maybe_peek_nth};

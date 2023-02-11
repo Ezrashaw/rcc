@@ -2,7 +2,8 @@ use rcc_lexer::{Keyword, Token, TokenKind};
 
 use crate::{
     ast::{Block, BlockItem, Expression, Statement},
-    maybe_next, maybe_peek, Parser,
+    utils::{maybe_next, maybe_peek},
+    Parser,
 };
 
 impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
