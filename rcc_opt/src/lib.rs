@@ -14,57 +14,8 @@ pub(crate) trait OptimizationPass {
     fn opt_expression(&mut self, _: &mut Expression) {}
 }
 
-pub fn optimize_ast(_ast: &mut Program) {
-    // optimize_ast_with_pass(ast, &mut ConstantFolder);
-
-    // // remove useless statements
-    // ast.function.block.block_items.retain(|stmt| {
-    //     !matches!(
-    //         stmt,
-    //         BlockItem::Statement(Statement::Expression(
-    //             Some(Expression::Literal { .. }) | None
-    //         ))
-    //     )
-    // });
-
-    // let mut inliner = VariableInliner::new();
-    // optimize_ast_with_pass(ast, &mut inliner);
-
-    // dbg!(&ast);
-
-    // // remove useless statements
-    // ast.functions.bod.block_items.retain(|stmt| {
-    //     !matches!(
-    //         stmt,
-    //         BlockItem::Statement(Statement::Expression(
-    //             Some(Expression::Literal { .. }) | None
-    //         ))
-    //     )
-    // });
-
-    // optimize_ast_with_pass(ast, &mut inliner);
-
-    // // remove useless statements
-    // ast.function.block.block_items.retain(|stmt| {
-    //     !matches!(
-    //         stmt,
-    //         BlockItem::Statement(Statement::Expression(
-    //             Some(Expression::Literal { .. }) | None
-    //         ))
-    //     )
-    // });
-
-    // optimize_ast_with_pass(ast, &mut ConstantFolder);
-
-    // // remove useless statements
-    // ast.function.block.block_items.retain(|stmt| {
-    //     !matches!(
-    //         stmt,
-    //         BlockItem::Statement(Statement::Expression(
-    //             Some(Expression::Literal { .. }) | None
-    //         ))
-    //     )
-    // });
+pub fn optimize_ast(ast: &mut Program) {
+    optimize_ast_with_pass(ast, &mut ConstantFolder);
 }
 
 fn optimize_ast_with_pass(ast: &mut Program, pass: &mut impl OptimizationPass) {
@@ -120,9 +71,8 @@ fn optimize_statement_with_pass(stmt: &mut Statement, pass: &mut impl Optimizati
             optimize_statement_with_pass(body, pass);
         }
 
-        Statement::Break | Statement::Continue => (),
-        Statement::For(_, _, _, _) => todo!(),
-        Statement::ForDecl(_, _, _, _, _) => todo!(),
+        // FIXME: we can't naively optimize loops, how should we do this?
+        Statement::Break | Statement::Continue | Statement::For(..) | Statement::ForDecl(..) => (),
     }
 }
 

@@ -60,8 +60,9 @@ impl ConstantFolder {
                     Some(Self::get_const_value(if_false)?)
                 }
             }
-            Expression::Assignment { .. } | Expression::Variable { .. } => None,
-            Expression::FunctionCall { .. } => todo!(),
+            Expression::Assignment { .. }
+            | Expression::Variable { .. }
+            | Expression::FunctionCall { .. } => None,
         }
     }
 }
