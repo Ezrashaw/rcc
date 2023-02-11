@@ -1,8 +1,7 @@
 mod register;
 
 use rcc_backend_traits::{write_asm, write_asm_no_indent, Backend, BackendContext};
-use rcc_bytecode::{Instruction, Register, RegisterOrConst};
-use rcc_structures::{BinOp, UnaryOp};
+use rcc_bytecode::{BinOp, Instruction, Register, RegisterOrConst, UnaryOp};
 use register::ArmRegister;
 use std::fmt::Write;
 
@@ -114,16 +113,20 @@ impl ArmBackend {
             | BinOp::GreaterThan
             | BinOp::GreaterThanOrEquals) => {
                 write_asm!(ctx, "cmp {lh}, {rh}");
-                write_asm!(ctx, "cset {lh}, {}", match op {
-                    BinOp::Equals => "eq",
-                    BinOp::NotEquals => "ne",
-                    BinOp::LessThan => "lt",
-                    BinOp::LessThanOrEquals => "le",
-                    BinOp::GreaterThan => "gt",
-                    BinOp::GreaterThanOrEquals => "ge",
-                    _ => panic!("provided binop was not relational operator!"),
-                });
-            },
+                write_asm!(
+                    ctx,
+                    "cset {lh}, {}",
+                    match op {
+                        BinOp::Equals => "eq",
+                        BinOp::NotEquals => "ne",
+                        BinOp::LessThan => "lt",
+                        BinOp::LessThanOrEquals => "le",
+                        BinOp::GreaterThan => "gt",
+                        BinOp::GreaterThanOrEquals => "ge",
+                        _ => panic!("provided binop was not relational operator!"),
+                    }
+                );
+            }
 
             BinOp::LeftShift => todo!(),
             BinOp::RightShift => todo!(),
@@ -131,9 +134,6 @@ impl ArmBackend {
             BinOp::BitwiseOr => todo!(),
             BinOp::ExclusiveOr => todo!(),
             BinOp::BitwiseAnd => todo!(),
-
-            BinOp::LogicalOr => panic!("`Instruction::BinOp(LogicalOr)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
-            BinOp::LogicalAnd => panic!("`Instruction::BinOp(LogicalAnd)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
         }
     }
 }

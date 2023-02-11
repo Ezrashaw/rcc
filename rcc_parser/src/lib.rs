@@ -13,7 +13,6 @@ mod utils;
 use ast::{BlockItem, Function};
 use peekmore::{PeekMore, PeekMoreIterator};
 use rcc_lexer::{Keyword, Token, TokenKind};
-use rcc_structures::BinOp;
 
 /// A parser for the `C` programming language.
 ///

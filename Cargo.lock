@@ -14,7 +14,6 @@ version = "0.0.0"
 dependencies = [
  "rcc_backend_traits",
  "rcc_bytecode",
- "rcc_structures",
 ]
 
 [[package]]
@@ -22,7 +21,6 @@ name = "rcc_backend_llvm"
 version = "0.0.0"
 dependencies = [
  "rcc_bytecode",
- "rcc_structures",
 ]
 
 [[package]]
@@ -38,7 +36,6 @@ version = "0.0.0"
 dependencies = [
  "rcc_backend_traits",
  "rcc_bytecode",
- "rcc_structures",
 ]
 
 [[package]]
@@ -46,7 +43,6 @@ name = "rcc_bytecode"
 version = "0.0.0"
 dependencies = [
  "rcc_parser",
- "rcc_structures",
 ]
 
 [[package]]
@@ -84,7 +80,6 @@ name = "rcc_opt"
 version = "0.0.0"
 dependencies = [
  "rcc_parser",
- "rcc_structures",
 ]
 
 [[package]]
@@ -95,15 +90,10 @@ dependencies = [
  "rcc_error",
  "rcc_lexer",
  "rcc_span",
- "rcc_structures",
 ]
 
 [[package]]
 name = "rcc_span"
-version = "0.0.0"
-
-[[package]]
-name = "rcc_structures"
 version = "0.0.0"
 
 [[package]]

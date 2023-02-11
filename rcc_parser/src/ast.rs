@@ -1,5 +1,3 @@
-use rcc_structures::{BinOp, UnaryOp};
-
 #[derive(Debug)]
 pub struct Program<'a> {
     pub functions: Vec<Function<'a>>,
@@ -145,4 +143,36 @@ pub enum Expression<'a> {
         identifier: &'a str,
         args: Vec<Expression<'a>>,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnaryOp {
+    Negation,
+    BitwiseComplement,
+    LogicalNegation,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Modulo,
+
+    LogicalOr,
+    LogicalAnd,
+    Equals,
+    NotEquals,
+    LessThan,
+    LessThanOrEquals,
+    GreaterThan,
+    GreaterThanOrEquals,
+
+    LeftShift,
+    RightShift,
+
+    BitwiseOr,
+    ExclusiveOr,
+    BitwiseAnd,
 }

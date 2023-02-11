@@ -1,5 +1,4 @@
-use rcc_parser::ast::{Block, BlockItem, Expression, Statement};
-use rcc_structures::BinOp;
+use rcc_parser::ast::{BinOp, Block, BlockItem, Expression, Statement};
 
 use crate::{Bytecode, Instruction, RegisterOrConst};
 
@@ -221,7 +220,11 @@ impl Bytecode<'_> {
 
                 let rhs = self.append_from_expression(rhs);
 
-                self.append_instruction(Instruction::BinaryOp(*op, lhs.clone(), rhs.clone()));
+                self.append_instruction(Instruction::BinaryOp(
+                    Self::lower_binop(*op),
+                    lhs.clone(),
+                    rhs.clone(),
+                ));
 
                 self.dealloc_reg(rhs);
                 lhs.downgrade()
@@ -230,7 +233,10 @@ impl Bytecode<'_> {
                 let rloc = self.append_from_expression(expr);
                 let wloc = self.upgrade_readable(rloc);
 
-                self.append_instruction(Instruction::UnaryOp(*op, wloc.clone()));
+                self.append_instruction(Instruction::UnaryOp(
+                    Self::lower_unary_op(*op),
+                    wloc.clone(),
+                ));
 
                 wloc.downgrade()
             }

@@ -1,9 +1,8 @@
 use std::ops::BitXor;
 
-use crate::{ast::Expression, maybe_next, maybe_peek, maybe_peek_nth, BinOp, Parser};
+use crate::{ast::{Expression, UnaryOp, BinOp}, maybe_next, maybe_peek, maybe_peek_nth, Parser};
 use rcc_error::SpannedError;
 use rcc_lexer::{Token, TokenKind};
-use rcc_structures::UnaryOp;
 
 impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
     /// Parses an expression wrapped in parentheses.
@@ -154,7 +153,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 macro_rules! impl_binop {
     (enum binary_op_levels {$( $lvl:literal = $match:pat, )+}; match tokens_to_binary_ops {$($token:pat => $op:expr,)*} ) => {
         impl<'a, I: ::std::iter::Iterator<Item = ::rcc_lexer::Token<'a>>> crate::Parser<'a, I> {
-            fn map_tok_to_op(tok: &::rcc_lexer::TokenKind) -> Option<::rcc_structures::BinOp> {
+            fn map_tok_to_op(tok: &::rcc_lexer::TokenKind) -> Option<crate::ast::BinOp> {
                 match tok {
                     $($token => Some($op),)*
                     _ => None

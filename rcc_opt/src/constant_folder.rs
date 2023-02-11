@@ -1,5 +1,4 @@
-use rcc_parser::ast::Expression;
-use rcc_structures::{BinOp, UnaryOp};
+use rcc_parser::ast::{BinOp, Expression, UnaryOp};
 
 use crate::OptimizationPass;
 

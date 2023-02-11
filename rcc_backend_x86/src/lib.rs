@@ -1,9 +1,10 @@
 use core::panic;
 use rcc_backend_traits::{write_asm, write_asm_no_indent, Backend, BackendContext};
+use rcc_bytecode::BinOp;
 use rcc_bytecode::Instruction;
 use rcc_bytecode::Register;
 use rcc_bytecode::RegisterOrConst;
-use rcc_structures::{BinOp, UnaryOp};
+use rcc_bytecode::UnaryOp;
 use register::X86Register;
 use std::fmt::Write;
 
@@ -175,9 +176,6 @@ impl X86Backend {
             BinOp::BitwiseOr => write_asm!(ctx, "orl {}, {}", rh, lh),
             BinOp::BitwiseAnd => write_asm!(ctx, "andl {}, {}", rh, lh),
             BinOp::ExclusiveOr => write_asm!(ctx, "xorl {}, {}", rh, lh),
-
-            BinOp::LogicalOr => panic!("`Instruction::BinOp(LogicalOr)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
-            BinOp::LogicalAnd => panic!("`Instruction::BinOp(LogicalAnd)` is not allowed, use the `ShortCircuit` and `BinaryBooleanOp` instructions instead."),
         }
     }
 

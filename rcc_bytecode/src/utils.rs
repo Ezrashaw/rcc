@@ -1,4 +1,6 @@
-use crate::{Bytecode, Instruction, Register, RegisterOrConst};
+use rcc_parser::ast;
+
+use crate::{instruction, Bytecode, Instruction, Register, RegisterOrConst};
 
 /// Private utility functions for the bytecode machine.
 ///
@@ -57,5 +59,36 @@ impl Bytecode<'_> {
     /// Helper function to add an instruction to the bytcode.
     pub(crate) fn append_instruction(&mut self, instr: Instruction) {
         self.instr.push(instr);
+    }
+
+    pub(crate) fn lower_binop(op: ast::BinOp) -> instruction::BinOp {
+        match op {
+            ast::BinOp::Add => instruction::BinOp::Add,
+            ast::BinOp::Sub => instruction::BinOp::Sub,
+            ast::BinOp::Mul => instruction::BinOp::Mul,
+            ast::BinOp::Div => instruction::BinOp::Div,
+            ast::BinOp::Modulo => instruction::BinOp::Modulo,
+            ast::BinOp::LogicalOr => unreachable!(),
+            ast::BinOp::LogicalAnd => unreachable!(),
+            ast::BinOp::Equals => instruction::BinOp::Equals,
+            ast::BinOp::NotEquals => instruction::BinOp::NotEquals,
+            ast::BinOp::LessThan => instruction::BinOp::LessThan,
+            ast::BinOp::LessThanOrEquals => instruction::BinOp::LessThanOrEquals,
+            ast::BinOp::GreaterThan => instruction::BinOp::GreaterThan,
+            ast::BinOp::GreaterThanOrEquals => instruction::BinOp::GreaterThanOrEquals,
+            ast::BinOp::LeftShift => instruction::BinOp::LeftShift,
+            ast::BinOp::RightShift => instruction::BinOp::RightShift,
+            ast::BinOp::BitwiseOr => instruction::BinOp::BitwiseOr,
+            ast::BinOp::ExclusiveOr => instruction::BinOp::ExclusiveOr,
+            ast::BinOp::BitwiseAnd => instruction::BinOp::BitwiseAnd,
+        }
+    }
+
+    pub(crate) fn lower_unary_op(op: ast::UnaryOp) -> instruction::UnaryOp {
+        match op {
+            ast::UnaryOp::Negation => instruction::UnaryOp::Negation,
+            ast::UnaryOp::BitwiseComplement => instruction::UnaryOp::BitwiseComplement,
+            ast::UnaryOp::LogicalNegation => instruction::UnaryOp::LogicalNegation,
+        }
     }
 }

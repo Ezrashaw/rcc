@@ -1,5 +1,3 @@
-use rcc_structures::{BinOp, UnaryOp};
-
 /// Bytecode instruction used by `rcc` internally.
 ///
 /// It targets a register machine (currently only 32-bit signed registers),
@@ -17,10 +15,6 @@ pub enum Instruction {
     ///
     /// Note that the first location is the LHS and the second the RHS.
     /// The result is stored in the LHS location.
-    ///
-    /// IMPORTANT: binary logical boolean operations are not implemented with
-    /// this instruction, use [`Instruction::CompareJump`] and
-    /// [`Instruction::NormalizeBoolean`] instead.
     BinaryOp(BinOp, Register, RegisterOrConst),
 
     /// Applies the given unary operation to the specified register.
@@ -61,6 +55,36 @@ pub enum Instruction {
     ///
     /// One-to-one mapping to the x86 JMP instruction.
     UnconditionalJump(u32),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnaryOp {
+    Negation,
+    BitwiseComplement,
+    LogicalNegation,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinOp {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Modulo,
+
+    Equals,
+    NotEquals,
+    LessThan,
+    LessThanOrEquals,
+    GreaterThan,
+    GreaterThanOrEquals,
+
+    LeftShift,
+    RightShift,
+
+    BitwiseOr,
+    ExclusiveOr,
+    BitwiseAnd,
 }
 
 /// A value that can be used as an operand in a [`Instruction`].

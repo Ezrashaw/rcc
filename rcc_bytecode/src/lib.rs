@@ -6,7 +6,7 @@ mod instruction;
 mod lowering;
 mod utils;
 
-pub use instruction::{Instruction, Register, RegisterOrConst};
+pub use instruction::{BinOp, Instruction, Register, RegisterOrConst, UnaryOp};
 
 /// `rcc` intermediate representation.
 ///

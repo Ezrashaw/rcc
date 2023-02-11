@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 rcc_parser = { version = "0.0.0", path = "../rcc_parser" }
-rcc_structures = { version = "0.0.0", path = "../rcc_structures" }
