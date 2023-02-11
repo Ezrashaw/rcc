@@ -9,7 +9,7 @@ use rcc_backend_llvm::LlvmBackend;
 use rcc_backend_x86::X86Backend;
 use rcc_bytecode::Bytecode;
 use rcc_lexer::Lexer;
-use rcc_parser::{pretty_printer::PrettyPrinter, Parser};
+use rcc_parser::Parser;
 
 const OPTIMIZE: bool = false;
 const USE_LLVM: bool = false;
@@ -110,19 +110,11 @@ fn compile_program_verbose(input: &str) -> String {
     println!("{ast:#?}");
     println!("===============");
 
-    println!("===== PRETTY =====");
-    PrettyPrinter::new(&mut stdout(), &ast).print().unwrap();
-    println!("==================");
-
     if OPTIMIZE {
         rcc_opt::optimize_ast(&mut ast);
         println!("===== OPTIMIZED =====");
         println!("{ast:#?}");
         println!("=====================");
-
-        println!("===== PRETTY-OPT =====");
-        PrettyPrinter::new(&mut stdout(), &ast).print().unwrap();
-        println!("======================");
     }
 
     let bytecode = Bytecode::from_ast(&ast);

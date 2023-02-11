@@ -117,7 +117,6 @@ pub enum Statement<'a> {
 #[derive(Debug)]
 pub enum Expression<'a> {
     BinOp {
-        has_parens: bool,
         lhs: Box<Expression<'a>>,
         rhs: Box<Expression<'a>>,
         op: BinOp,
@@ -131,7 +130,7 @@ pub enum Expression<'a> {
         val: i32,
     },
     Assignment {
-        identifier: u32,
+        variable: u32,
         expression: Box<Expression<'a>>,
     },
     Variable {

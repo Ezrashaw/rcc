@@ -236,12 +236,12 @@ impl Bytecode<'_> {
             }
             Expression::Literal { val } => RegisterOrConst::Constant(*val),
             Expression::Assignment {
-                identifier,
                 expression,
+                variable,
             } => {
                 let reg = self.append_from_expression(expression);
 
-                self.append_instruction(Instruction::AssignVariable(*identifier, reg.clone()));
+                self.append_instruction(Instruction::AssignVariable(*variable, reg.clone()));
 
                 reg
             }

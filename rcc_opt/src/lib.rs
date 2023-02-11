@@ -1,9 +1,7 @@
 mod constant_folder;
-mod variable_inliner;
 
 pub use constant_folder::ConstantFolder;
 use rcc_parser::ast::{Block, BlockItem, Expression, Function, Program, Statement};
-
 
 /// Defines the interface for creating an optimization pass.
 ///

@@ -1,19 +1,19 @@
 #![feature(let_chains)]
-#![feature(is_some_and)]
 #![feature(if_let_guard)]
 #![feature(option_result_contains)]
 
 use self::ast::{Expression, Program, Statement};
 
 pub mod ast;
-pub mod pretty_printer;
+
+mod expr;
+mod utils;
 
 use ast::{Block, BlockItem, Function};
 use peekmore::{PeekMore, PeekMoreIterator};
 use rcc_error::SpannedError;
 use rcc_lexer::{Keyword, Token, TokenKind};
-use rcc_span::Span;
-use rcc_structures::{BinOp, UnaryOp};
+use rcc_structures::BinOp;
 
 /// A parser for the `C` programming language.
 ///
@@ -32,26 +32,6 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         Self {
             input: input.peekmore(),
             scopes: Vec::new(),
-        }
-    }
-
-    fn expect_token(&mut self, expected_kind: TokenKind) {
-        let tok = self.input.next();
-
-        if !tok.as_ref().is_some_and(|tok| tok.kind == expected_kind) {
-            Self::emit_err_from_token(&format!("`{expected_kind:?}`"), tok);
-        }
-    }
-
-    fn emit_err_from_token(expected: &str, token: Option<Token>) -> ! {
-        if let Some(token) = token {
-            SpannedError::with_span(
-                format!("expected {expected}, found `{:?}`", token.kind),
-                token.span,
-            )
-            .emit()
-        } else {
-            SpannedError::without_span(format!("expected {expected}, found EOF")).emit()
         }
     }
 
@@ -217,6 +197,7 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         let stmt = match tok.map(|t| &t.kind) {
             Some(TokenKind::Keyword(Keyword::Return)) => {
                 self.input.next();
+                
                 let expression = self.parse_expression();
 
                 Statement::Return(expression)
@@ -340,217 +321,5 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
         self.expect_token(TokenKind::Semicolon);
         stmt
-    }
-
-    fn parse_optional_expression(&mut self) -> Option<Expression<'a>> {
-        if self.input.peek().map_or(true, |tok| {
-            matches!(tok.kind, TokenKind::Semicolon | TokenKind::CloseParen)
-        }) {
-            None
-        } else {
-            Some(self.parse_expression())
-        }
-    }
-
-    fn parse_expression(&mut self) -> Expression<'a> {
-        if let Some(TokenKind::Equals) = self.input.peek_nth(1).map(|t| t.kind.clone()) {
-            let ident_tok = self.input.next();
-            let Some(Token { kind: TokenKind::Ident(ident), .. }) = ident_tok else {
-                Self::emit_err_from_token("<variable>", ident_tok);
-            };
-
-            let identifier = self.get_variable(ident, ident_tok.unwrap().span);
-
-            self.expect_token(TokenKind::Equals);
-
-            let expression = self.parse_expression();
-
-            Expression::Assignment {
-                identifier,
-                expression: Box::new(expression),
-            }
-        } else {
-            self.parse_ternary()
-        }
-    }
-
-    fn parse_ternary(&mut self) -> Expression<'a> {
-        let expr = self.parse_binop();
-
-        if let Some(Token {
-            kind: TokenKind::QuestionMark,
-            ..
-        }) = self.input.peek()
-        {
-            self.input.next();
-
-            let if_true = Box::new(self.parse_expression());
-            self.expect_token(TokenKind::Colon);
-            let if_false = Box::new(self.parse_ternary());
-
-            Expression::TernaryConditional {
-                controlling: expr,
-                if_true,
-                if_false,
-            }
-        } else {
-            *expr
-        }
-    }
-
-    fn parse_operand(&mut self) -> Expression<'a> {
-        let tok = self.input.next();
-
-        match tok.as_ref().map(|t| &t.kind) {
-            Some(TokenKind::Literal(val)) => Expression::Literal { val: *val as i32 },
-
-            Some(tok) if let Some(unary) = Self::unary_op_from_tok(tok)
-                => Expression::UnaryOp { expr: Box::new(self.parse_operand()), op: unary },
-
-            Some(TokenKind::OpenParen) => {
-                let mut expr = self.parse_expression();
-                if let Expression::BinOp { ref mut has_parens, .. } = expr {
-                    *has_parens = true;
-                }
-
-                self.expect_token(TokenKind::CloseParen);
-                expr
-            },
-
-            Some(TokenKind::Ident(ident)) => {
-                if let Some(TokenKind::OpenParen) = self.input.peek().as_ref().map(|t| &t.kind) {
-                    self.input.next();
-
-                    let mut args = Vec::new();
-
-                    while !matches!(self.input.peek().map(|t| &t.kind), Some(TokenKind::CloseParen)) {
-                        args.push(self.parse_expression());
-
-                        if !matches!(self.input.peek().map(|t| &t.kind), Some(TokenKind::Comma)) {
-                            break;
-                        }
-
-                        self.expect_token(TokenKind::Comma);
-                    }
-
-                    self.expect_token(TokenKind::CloseParen);
-
-                    Expression::FunctionCall { identifier: ident, args }
-                } else {
-                    Expression::Variable { identifier: self.get_variable(ident, tok.unwrap().span) }
-                }
-            }
-
-            _ => Self::emit_err_from_token("<expresion>", tok),
-        }
-    }
-
-    fn unary_op_from_tok(kind: &TokenKind) -> Option<UnaryOp> {
-        match kind {
-            TokenKind::Minus => Some(UnaryOp::Negation),
-            TokenKind::Tilde => Some(UnaryOp::BitwiseComplement),
-            TokenKind::Exclamation => Some(UnaryOp::LogicalNegation),
-
-            _ => None,
-        }
-    }
-
-    fn get_variable(&mut self, ident: &str, span: Span) -> u32 {
-        // FIXME: make this more functional
-        let mut position = self.scopes.iter().flatten().count() as u32 - 1;
-        for search in self
-            .scopes
-            .iter()
-            .rev()
-            .flat_map(|scope| scope.iter().rev())
-        {
-            if ident == *search {
-                return position;
-            }
-
-            position -= 1;
-        }
-
-        SpannedError::with_span("undefined variable", span).emit();
-    }
-}
-
-macro_rules! impl_binop {
-    ({$( $lvl:literal = $match:pat, )+}; {$($token:pat => $op:expr,)*} ) => {
-        impl<'a, I: ::std::iter::Iterator<Item = ::rcc_lexer::Token<'a>>> crate::Parser<'a, I> {
-            fn map_tok_to_op(tok: ::rcc_lexer::TokenKind) -> Option<::rcc_structures::BinOp> {
-                match tok {
-                    $($token => Some($op),)*
-                    _ => None
-                }
-            }
-
-            fn parse_binop(&mut self) -> Box<crate::ast::Expression<'a>> {
-                self.parse_binop_impl(10)
-            }
-
-            fn parse_binop_impl(&mut self, lvl: u8) -> Box<crate::ast::Expression<'a>> {
-                if lvl == 0 {
-                    return Box::new(self.parse_operand());
-                }
-
-                let lhs = self.parse_binop_impl(lvl - 1);
-
-                match lvl {
-                    $($lvl => {
-                        let mut lhs = lhs;
-                        while let Some(op) = self.input.peek().map(|tk| tk.kind.clone()).and_then(Self::map_tok_to_op) && matches!(op, $match) {
-                            self.input.next();
-
-                            let rhs = self.parse_binop_impl(lvl - 1);
-
-                            lhs = Box::new(crate::ast::Expression::BinOp { has_parens: false, lhs, rhs, op })
-                        }
-
-                        lhs
-                    })+
-                    _ => unreachable!()
-                }
-            }
-        }
-    };
-}
-
-impl_binop! {
-    {
-        10 = BinOp::LogicalOr,
-        9 = BinOp::LogicalAnd,
-        8 = BinOp::BitwiseOr,
-        7 = BinOp::ExclusiveOr,
-        6 = BinOp::BitwiseAnd,
-        5 = BinOp::Equals | BinOp::NotEquals,
-        4 = BinOp::LessThan | BinOp::LessThanOrEquals | BinOp::GreaterThan | BinOp::GreaterThanOrEquals,
-        3 = BinOp::LeftShift | BinOp::RightShift,
-        2 = BinOp::Add | BinOp::Sub,
-        1 = BinOp::Mul | BinOp::Div | BinOp::Modulo,
-    };
-    {
-        TokenKind::DoublePipe => BinOp::LogicalOr,
-        TokenKind::DoubleAnd => BinOp::LogicalAnd,
-        TokenKind::DoubleEquals => BinOp::Equals,
-        TokenKind::ExclaimEquals => BinOp::NotEquals,
-        TokenKind::LeftArrowEquals => BinOp::LessThanOrEquals,
-        TokenKind::RightArrowEquals => BinOp::GreaterThanOrEquals,
-
-        TokenKind::Plus => BinOp::Add,
-        TokenKind::Minus => BinOp::Sub,
-        TokenKind::Star => BinOp::Mul,
-        TokenKind::Slash => BinOp::Div,
-        TokenKind::Percent => BinOp::Modulo,
-
-        TokenKind::RightArrow => BinOp::GreaterThan,
-        TokenKind::LeftArrow => BinOp::LessThan,
-
-        TokenKind::DoubleLeftArrow => BinOp::LeftShift,
-        TokenKind::DoubleRightArrow => BinOp::RightShift,
-
-        TokenKind::Pipe => BinOp::BitwiseOr,
-        TokenKind::And => BinOp::BitwiseAnd,
-        TokenKind::Caret => BinOp::ExclusiveOr,
     }
 }
