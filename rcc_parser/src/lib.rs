@@ -35,6 +35,13 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         }
     }
 
+    /// Parses a C program, in compliance with (a subset of) the C11 standard.
+    ///
+    /// We use the [N1548 draft](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1548.pdf)
+    /// of the C11 standard (semantically equivalent) as the reference.
+    ///
+    /// More formally: parses the `6.9 translation-unit` grammar as per Annex A
+    /// of the N1548 draft of the C11 standard.
     pub fn parse(mut self) -> Program<'a> {
         let mut functions = Vec::new();
 
@@ -45,25 +52,20 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
         Program { functions }
     }
 
+    /// Parses a function.
+    ///
+    /// The function may have a body or be a foward declaration of the form:
+    /// `int function(int arg1, int arg2, ..);`
+    ///
+    /// Parses the `6.9.1 function-definition` grammar as per Annex A of the
+    /// N1548 draft of the C11 standard.
     fn parse_function(&mut self) -> Function<'a> {
         self.expect_token(TokenKind::Keyword(Keyword::Int));
 
-        let tok = self.input.next();
-        let Some(TokenKind::Ident(name)) = tok.as_ref().map(|t| &t.kind) else {
-            Self::emit_err_from_token("<identifier>", tok)
-        };
-
+        let name = self.expect_ident();
         let args = self.parse_fn_args();
 
-        // FIXME: this is a bit gross
-        let body = if matches!(
-            self.input.peek().map(|t| &t.kind),
-            Some(TokenKind::Semicolon)
-        ) {
-            self.input.next();
-
-            None
-        } else {
+        let body = (!maybe_next!(self, TokenKind::Semicolon)).then(|| {
             self.scopes.push(args.clone());
 
             let mut block = self.parse_block(false);
@@ -81,8 +83,8 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
                     )));
             }
 
-            Some(block)
-        };
+            block
+        });
 
         Function { name, args, body }
     }
@@ -92,24 +94,13 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
 
         self.expect_token(TokenKind::OpenParen);
 
-        while matches!(
-            self.input.peek().map(|tk| &tk.kind),
-            Some(TokenKind::Keyword(Keyword::Int))
-        ) {
-            self.expect_token(TokenKind::Keyword(Keyword::Int));
+        while maybe_next!(self, TokenKind::Keyword(Keyword::Int)) {
+            let arg_name = self.expect_ident();
+            args.push(arg_name);
 
-            let tok = self.input.next();
-            let Some(TokenKind::Ident(name)) = tok.as_ref().map(|t| &t.kind) else {
-                Self::emit_err_from_token("<identifier>", tok)
-            };
-
-            args.push(*name);
-
-            if !matches!(self.input.peek().map(|tk| &tk.kind), Some(TokenKind::Comma)) {
+            if !maybe_next!(self, TokenKind::Comma) {
                 break;
             }
-
-            self.expect_token(TokenKind::Comma);
         }
 
         self.expect_token(TokenKind::CloseParen);

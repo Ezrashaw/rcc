@@ -94,18 +94,6 @@ impl<'a, I: Iterator<Item = Token<'a>>> Parser<'a, I> {
             SpannedError::without_span(format!("`{expected_kind:?}`")).emit();
         }
     }
-
-    pub(crate) fn emit_err_from_token(expected: &str, token: Option<Token>) -> ! {
-        if let Some(token) = token {
-            SpannedError::with_span(
-                format!("expected {expected}, found `{:?}`", token.kind),
-                token.span,
-            )
-            .emit()
-        } else {
-            SpannedError::without_span(format!("expected {expected}, found EOF")).emit()
-        }
-    }
 }
 
 #[macro_export]
