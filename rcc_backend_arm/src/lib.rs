@@ -128,12 +128,12 @@ impl ArmBackend {
                 );
             }
 
-            BinOp::LeftShift => todo!(),
-            BinOp::RightShift => todo!(),
+            BinOp::LeftShift => write_asm!(ctx, "lsl {lh}, {lh}, {rh}"),
+            BinOp::RightShift => write_asm!(ctx, "lsr {lh}, {lh}, {rh}"),
 
-            BinOp::BitwiseOr => todo!(),
-            BinOp::ExclusiveOr => todo!(),
-            BinOp::BitwiseAnd => todo!(),
+            BinOp::BitwiseOr => write_asm!(ctx, "orr {lh}, {lh}, {rh}"),
+            BinOp::ExclusiveOr => write_asm!(ctx, "eor {lh}, {lh}, {rh}"),
+            BinOp::BitwiseAnd => write_asm!(ctx, "and {lh}, {lh}, {rh}"),
         }
     }
 }
