@@ -289,7 +289,18 @@ impl Bytecode<'_> {
 
                 false_reg
             }
-            Expression::FunctionCall { .. } => todo!(),
+            Expression::FunctionCall { identifier, args } => {
+                // FIXME: implement arguments
+                assert_eq!(args.len(), 0);
+
+                let reg = self.alloc_reg();
+                self.append_instruction(Instruction::CallFunction(
+                    identifier.to_string(),
+                    reg.clone(),
+                ));
+
+                reg.downgrade()
+            }
         }
     }
 

@@ -55,6 +55,8 @@ impl Backend for ArmBackend {
                 write_asm!(ctx, "ldr {}, {}", Self::reg(reg), Self::var(*var));
             }
 
+            Instruction::CallFunction(..) => todo!(),
+
             Instruction::JumpDummy(loc) => write_asm_no_indent!(ctx, "_{loc}:"),
             Instruction::UnconditionalJump(loc) => write_asm!(ctx, "b _{loc}"),
 

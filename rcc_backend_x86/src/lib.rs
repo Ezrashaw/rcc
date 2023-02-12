@@ -70,6 +70,11 @@ impl Backend for X86Backend {
                 write_asm!(ctx, "movl {}, {}", Self::var(*var), Self::reg(reg));
             }
 
+            Instruction::CallFunction(function, return_reg) => {
+                write_asm!(ctx, "call {function}");
+                write_asm!(ctx, "movl %eax, {}", Self::reg(return_reg));
+            }
+
             Instruction::JumpDummy(loc) => write_asm_no_indent!(ctx, "_{loc}:"),
             Instruction::UnconditionalJump(loc) => write_asm!(ctx, "jmp _{loc}"),
 

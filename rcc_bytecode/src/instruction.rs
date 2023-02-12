@@ -43,6 +43,9 @@ pub enum Instruction {
     /// stack offsets.
     LoadVariable(u32, Register),
 
+    /// Calls the given function and puts the return value in the given place
+    CallFunction(String, Register),
+
     /// An instruction which specifies where another instruction should jump
     /// to.
     ///
