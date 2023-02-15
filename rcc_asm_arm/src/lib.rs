@@ -1,14 +1,14 @@
 mod register;
 
-use rcc_backend_traits::{write_asm, write_asm_no_indent, Backend, BackendContext};
+use rcc_backend_asm::{write_asm, write_asm_no_indent, AsmBackend, AsmBackendContext};
 use rcc_bytecode::{BinOp, Instruction, Register, RegisterOrConst, UnaryOp};
 use register::ArmRegister;
 use std::fmt::Write;
 
 pub struct ArmBackend;
 
-impl Backend for ArmBackend {
-    fn write_function(&mut self, ctx: &mut BackendContext, fn_name: &str) {
+impl AsmBackend for ArmBackend {
+    fn write_function(&mut self, ctx: &mut AsmBackendContext, fn_name: &str) {
         if std::env::consts::OS == "macos" {
             write_asm!(ctx, ".globl _{fn_name}");
             write_asm_no_indent!(ctx, "_{fn_name}:");
@@ -22,7 +22,7 @@ impl Backend for ArmBackend {
         write_asm!(ctx, "sub sp, sp, #32");
     }
 
-    fn write_instruction(&mut self, ctx: &mut BackendContext, instruction: &Instruction) {
+    fn write_instruction(&mut self, ctx: &mut AsmBackendContext, instruction: &Instruction) {
         match instruction {
             Instruction::Move(from, to) => {
                 write_asm!(ctx, "mov {}, {}", Self::reg(to), Self::roc(from));
@@ -85,7 +85,7 @@ impl ArmBackend {
         format!("[sp, {}]", 32 - (id + 1) * 4)
     }
 
-    fn write_unary_op(ctx: &mut BackendContext, op: UnaryOp, register: &Register) {
+    fn write_unary_op(ctx: &mut AsmBackendContext, op: UnaryOp, register: &Register) {
         let reg = Self::reg(register);
         match op {
             UnaryOp::Negation => write_asm!(ctx, "neg {reg}"),
@@ -97,7 +97,12 @@ impl ArmBackend {
         }
     }
 
-    fn write_binary_op(ctx: &mut BackendContext, op: BinOp, lhs: &Register, rhs: &RegisterOrConst) {
+    fn write_binary_op(
+        ctx: &mut AsmBackendContext,
+        op: BinOp,
+        lhs: &Register,
+        rhs: &RegisterOrConst,
+    ) {
         let lh = Self::reg(lhs);
         let rh = Self::roc(rhs);
 

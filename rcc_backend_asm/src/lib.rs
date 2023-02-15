@@ -2,17 +2,17 @@ use std::fmt::Write;
 
 use rcc_bytecode::{Bytecode, Instruction};
 
-pub trait Backend {
-    fn write_function(&mut self, ctx: &mut BackendContext, fn_name: &str);
-    fn write_instruction(&mut self, ctx: &mut BackendContext, instruction: &Instruction);
+pub trait AsmBackend {
+    fn write_function(&mut self, ctx: &mut AsmBackendContext, fn_name: &str);
+    fn write_instruction(&mut self, ctx: &mut AsmBackendContext, instruction: &Instruction);
 }
 
-pub struct BackendContext {
+pub struct AsmBackendContext {
     buf: String,
     indent_lvl: u32,
 }
 
-impl BackendContext {
+impl AsmBackendContext {
     pub fn _buf(&mut self) -> &mut String {
         &mut self.buf
     }
@@ -53,8 +53,8 @@ macro_rules! write_asm_no_indent {
     };
 }
 
-pub fn generate_assembly(bytecode: &[Bytecode], backend: &mut impl Backend) -> String {
-    let mut ctx = BackendContext {
+pub fn generate_assembly(bytecode: &[Bytecode], backend: &mut impl AsmBackend) -> String {
+    let mut ctx = AsmBackendContext {
         buf: String::new(),
         indent_lvl: 0,
     };
@@ -67,9 +67,9 @@ pub fn generate_assembly(bytecode: &[Bytecode], backend: &mut impl Backend) -> S
 }
 
 fn generate_from_function(
-    ctx: &mut BackendContext,
+    ctx: &mut AsmBackendContext,
     bytecode: &Bytecode,
-    backend: &mut impl Backend,
+    backend: &mut impl AsmBackend,
 ) {
     ctx.increment_indent();
 

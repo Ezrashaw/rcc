@@ -5,10 +5,9 @@ members = [
     "rcc_error",
     "rcc_parser",
     "rcc_bytecode",
-    "rcc_backend_x86",
     "rcc_main",
     "rcc_opt",
-    "rcc_backend_llvm",
-    "rcc_backend_traits",
-    "rcc_backend_arm",
+    "rcc_backend_asm",
+    "rcc_asm_arm",
+    "rcc_asm_x86",
 ]

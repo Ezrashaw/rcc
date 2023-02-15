@@ -1,5 +1,5 @@
 use core::panic;
-use rcc_backend_traits::{write_asm, write_asm_no_indent, Backend, BackendContext};
+use rcc_backend_asm::{write_asm, write_asm_no_indent, AsmBackend, AsmBackendContext};
 use rcc_bytecode::BinOp;
 use rcc_bytecode::Instruction;
 use rcc_bytecode::Register;
@@ -12,8 +12,8 @@ mod register;
 
 pub struct X86Backend;
 
-impl Backend for X86Backend {
-    fn write_function(&mut self, ctx: &mut BackendContext, fn_name: &str) {
+impl AsmBackend for X86Backend {
+    fn write_function(&mut self, ctx: &mut AsmBackendContext, fn_name: &str) {
         if std::env::consts::OS == "macos" {
             write_asm!(ctx, ".globl _{fn_name}");
             write_asm_no_indent!(ctx, "_{fn_name}:");
@@ -30,7 +30,7 @@ impl Backend for X86Backend {
         );
     }
 
-    fn write_instruction(&mut self, ctx: &mut BackendContext, instruction: &Instruction) {
+    fn write_instruction(&mut self, ctx: &mut AsmBackendContext, instruction: &Instruction) {
         match instruction {
             Instruction::Move(from, to) => {
                 write_asm!(ctx, "movl {}, {}", Self::roc(from), Self::reg(to));
@@ -115,7 +115,7 @@ impl X86Backend {
     /// that this upgrade is done here (and not in AST lowering) is because
     /// these upgrades are for inherently x86 reasons and might not be
     /// applicable to other backends.
-    fn upgrade_roc(ctx: &mut BackendContext, val: &RegisterOrConst) -> String {
+    fn upgrade_roc(ctx: &mut AsmBackendContext, val: &RegisterOrConst) -> String {
         if matches!(val, RegisterOrConst::Constant(_)) {
             write_asm!(
                 ctx,
@@ -129,7 +129,7 @@ impl X86Backend {
         }
     }
 
-    fn write_unary_op(ctx: &mut BackendContext, op: UnaryOp, register: &Register) {
+    fn write_unary_op(ctx: &mut AsmBackendContext, op: UnaryOp, register: &Register) {
         let reg = Self::reg(register);
         match op {
             UnaryOp::Negation => write_asm!(ctx, "neg {reg}"),
@@ -141,7 +141,12 @@ impl X86Backend {
         }
     }
 
-    fn write_binary_op(ctx: &mut BackendContext, op: BinOp, lhs: &Register, rhs: &RegisterOrConst) {
+    fn write_binary_op(
+        ctx: &mut AsmBackendContext,
+        op: BinOp,
+        lhs: &Register,
+        rhs: &RegisterOrConst,
+    ) {
         let lh = Self::reg(lhs);
         let rh = Self::roc(rhs);
 
@@ -199,7 +204,7 @@ impl X86Backend {
     /// Write a division instruction into the [`BackendContext`].
     ///
     /// This is used by both [`BinOp::Modulo`] and [`BinOp::Div`].
-    fn write_division(ctx: &mut BackendContext, lhs: &str, rhs: &RegisterOrConst) {
+    fn write_division(ctx: &mut AsmBackendContext, lhs: &str, rhs: &RegisterOrConst) {
         // x86 division (`idiv`) requires the dividend to be in EDX:EAX, and
         // the divisor register is passed separately. This is fine as we
         // don't use EAX or EDX as allocatable registers.

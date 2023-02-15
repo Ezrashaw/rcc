@@ -4,15 +4,13 @@ use std::{
     process::{Command, Stdio},
 };
 
-use rcc_backend_arm::ArmBackend;
-use rcc_backend_llvm::LlvmBackend;
-use rcc_backend_x86::X86Backend;
+use rcc_asm_arm::ArmBackend;
+use rcc_asm_x86::X86Backend;
 use rcc_bytecode::Bytecode;
 use rcc_lexer::Lexer;
 use rcc_parser::Parser;
 
 const OPTIMIZE: bool = false;
-const USE_LLVM: bool = false;
 
 fn main() {
     let arg = std::env::args().nth(1);
@@ -48,50 +46,19 @@ fn main() {
             .to_string()
     });
 
-    if USE_LLVM {
-        let mut llc = Command::new("llc")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-            .expect("failed to run `llc`");
+    let mut gcc = Command::new("gcc")
+        .args(["-o", &path, "-xassembler", "-"])
+        .stdin(Stdio::piped())
+        .spawn()
+        .expect("failed to run `gcc`");
 
-        llc.stdin
-            .as_mut()
-            .unwrap()
-            .write_all(asm.as_bytes())
-            .expect("failed to pipe to `llc`");
+    gcc.stdin
+        .as_mut()
+        .unwrap()
+        .write_all(asm.as_bytes())
+        .expect("failed to pipe to `gcc`");
 
-        let asm = llc.wait_with_output().unwrap();
-
-        let mut clang = Command::new("clang")
-            .args(["-o", &path, "-xassembler", "-"])
-            .stdin(Stdio::piped())
-            .spawn()
-            .expect("failed to run `clang`");
-
-        clang
-            .stdin
-            .as_mut()
-            .unwrap()
-            .write_all(&asm.stdout)
-            .expect("failed to pipe to `clang`");
-
-        clang.wait().unwrap();
-    } else {
-        let mut gcc = Command::new("gcc")
-            .args(["-o", &path, "-xassembler", "-"])
-            .stdin(Stdio::piped())
-            .spawn()
-            .expect("failed to run `gcc`");
-
-        gcc.stdin
-            .as_mut()
-            .unwrap()
-            .write_all(asm.as_bytes())
-            .expect("failed to pipe to `gcc`");
-
-        gcc.wait().unwrap();
-    }
+    gcc.wait().unwrap();
 }
 
 fn compile_program_verbose(input: &str) -> String {
@@ -152,30 +119,23 @@ fn gen_asm(bytecodes: &[Bytecode], verbose: bool) -> String {
         print!("====== ");
     }
 
-    let asm = if USE_LLVM {
-        if verbose {
-            print!("LLVM IR");
-        }
-        LlvmBackend::gen_llvm(bytecodes.first().unwrap())
-    } else {
-        let arch = std::env::consts::ARCH;
-        match arch {
-            "aarch64" => {
-                if verbose {
-                    print!("ARM ASSEMBLY");
-                }
-
-                rcc_backend_traits::generate_assembly(&bytecodes, &mut ArmBackend)
+    let arch = std::env::consts::ARCH;
+    let asm = match arch {
+        "aarch64" => {
+            if verbose {
+                print!("ARM ASSEMBLY");
             }
-            "x86_64" => {
-                if verbose {
-                    print!("x86 ASSEMBLY");
-                }
 
-                rcc_backend_traits::generate_assembly(&bytecodes, &mut X86Backend)
-            }
-            _ => panic!("unsupported architecture"),
+            rcc_backend_asm::generate_assembly(&bytecodes, &mut ArmBackend)
         }
+        "x86_64" => {
+            if verbose {
+                print!("x86 ASSEMBLY");
+            }
+
+            rcc_backend_asm::generate_assembly(&bytecodes, &mut X86Backend)
+        }
+        _ => panic!("unsupported architecture"),
     };
 
     if verbose {

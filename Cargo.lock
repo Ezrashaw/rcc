@@ -9,32 +9,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca84ba11ed2de09f9a946e35be5efe5382bdd0621780b46ea8e24a7797b5be88"
 
 [[package]]
-name = "rcc_backend_arm"
+name = "rcc_asm_arm"
 version = "0.0.0"
 dependencies = [
- "rcc_backend_traits",
+ "rcc_backend_asm",
  "rcc_bytecode",
 ]
 
 [[package]]
-name = "rcc_backend_llvm"
+name = "rcc_asm_x86"
 version = "0.0.0"
 dependencies = [
+ "rcc_backend_asm",
  "rcc_bytecode",
 ]
 
 [[package]]
-name = "rcc_backend_traits"
+name = "rcc_backend_asm"
 version = "0.0.0"
 dependencies = [
- "rcc_bytecode",
-]
-
-[[package]]
-name = "rcc_backend_x86"
-version = "0.0.0"
-dependencies = [
- "rcc_backend_traits",
  "rcc_bytecode",
 ]
 
@@ -65,10 +58,9 @@ dependencies = [
 name = "rcc_main"
 version = "0.0.0"
 dependencies = [
- "rcc_backend_arm",
- "rcc_backend_llvm",
- "rcc_backend_traits",
- "rcc_backend_x86",
+ "rcc_asm_arm",
+ "rcc_asm_x86",
+ "rcc_backend_asm",
  "rcc_bytecode",
  "rcc_lexer",
  "rcc_opt",
