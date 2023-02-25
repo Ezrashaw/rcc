@@ -1,9 +1,11 @@
+use std::fmt::{self, Display};
+
 /// Bytecode instruction used by `rcc` internally.
 ///
 /// It targets a register machine (currently only 32-bit signed registers),
 /// with an "infinite" number of registers.
 /// (the x86 backend overflows registers to the stack)
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Instruction {
     /// Moves a value into a register.
     Move(RegisterOrConst, Register),
@@ -60,6 +62,26 @@ pub enum Instruction {
     UnconditionalJump(u32),
 }
 
+impl Display for Instruction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Instruction::Move(from, to) => write!(f, "{to} = {from}"),
+            Instruction::Return(reg) => write!(f, "ret {reg}"),
+            Instruction::BinaryOp(op, lhs, rhs) => write!(f, "{lhs} = {lhs} {op:?} {rhs}"),
+            Instruction::UnaryOp(op, reg) => write!(f, "{reg} = {op:?} {reg}"),
+            Instruction::CompareJump(val, should_jump, label) => {
+                write!(f, "if ({val} == {should_jump}) {{ goto {label} }}")
+            }
+            Instruction::NormalizeBoolean(reg) => write!(f, "{reg} = ({reg} == 0) ? 0 : 1"),
+            Instruction::AssignVariable(var, val) => write!(f, "var{var} = {val}"),
+            Instruction::LoadVariable(var, reg) => write!(f, "{reg} = var{var}"),
+            Instruction::CallFunction(name, reg) => write!(f, "{reg} = call {name}"),
+            Instruction::JumpDummy(label) => write!(f, "def {label}:"),
+            Instruction::UnconditionalJump(label) => write!(f, "goto {label}"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnaryOp {
     Negation,
@@ -104,12 +126,27 @@ pub enum RegisterOrConst {
     Constant(i32),
 }
 
+impl Display for RegisterOrConst {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RegisterOrConst::Register(reg) => write!(f, "{reg}"),
+            RegisterOrConst::Constant(val) => write!(f, "${val}"),
+        }
+    }
+}
+
 /// A `rcc` bytecode register.
 ///
 /// 256 registers exist in the `rcc` bytecode VM, these are mapped to hardware
 /// registers and eventually overflow to the stack.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Register(pub(crate) u8);
+
+impl Display for Register {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "%{}", self.0)
+    }
+}
 
 impl Register {
     /// Convert the [`Register`] to a [`RegisterOrConst`].

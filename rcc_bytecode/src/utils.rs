@@ -10,7 +10,7 @@ impl Bytecode<'_> {
         let loc = (0..255)
             .map(Register)
             .find(|loc| !self.allocated_registers.contains(loc))
-            .unwrap_or_else(|| panic!("exhausted registers during bytecode generations: {self:?}"));
+            .unwrap_or_else(|| panic!("exhausted registers during bytecode generations"));
 
         self.allocated_registers.push(loc.clone());
 

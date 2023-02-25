@@ -14,7 +14,7 @@ impl Bytecode<'_> {
         if !self.allocated_registers.is_empty() {
             println!("~~~~ BYTECODE DUMP ~~~~");
             for instruction in &self.instr {
-                println!("{instruction:?}");
+                println!("{instruction}");
             }
             println!("~~~~~~~~~~~~~~~~~~~~~~~");
             panic!("internal *bug*: we are leaking registers")

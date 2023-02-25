@@ -89,7 +89,7 @@ fn compile_program_verbose(input: &str) -> String {
     for function in &bytecode {
         println!("== BYTECODE FOR `{}` ==", function.fn_name());
         for instruction in function.instructions() {
-            println!("{instruction:?}");
+            println!("{instruction}");
         }
         println!("======");
     }

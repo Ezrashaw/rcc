@@ -77,7 +77,7 @@ fn generate_from_function(
     writeln!(ctx.buf).unwrap();
 
     for instr in bytecode.instructions() {
-        write_asm!(ctx, "# {instr:?}");
+        write_asm!(ctx, "# {instr}");
 
         backend.write_instruction(ctx, instr);
         writeln!(ctx.buf).unwrap();

@@ -16,7 +16,6 @@ pub use instruction::{BinOp, Instruction, Register, RegisterOrConst, UnaryOp};
 /// Use the [`Bytecode::from_function`] method to generate bytecode for a
 /// function. Or the [`Bytecode::from_ast`] method to generate bytecode for all
 /// functions.
-#[derive(Debug)]
 pub struct Bytecode<'a> {
     // "public" fields
     fn_name: &'a str,
